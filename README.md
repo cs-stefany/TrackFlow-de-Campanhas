@@ -6,6 +6,40 @@ Sistema de tracking de performance de campanhas de anúncios. Permite gerenciar 
 
 ---
 
+## Screenshots
+
+### Dashboard - Ofertas Ativas
+![Home - Ofertas Ativas](docs/screenshots/Home_Ofertas_Ativas.png)
+
+### Dashboard - Filtro por Status
+![Home - Filtro Inativos](docs/screenshots/Home_Filtro_Inativos.png)
+
+### Gestão de Ofertas
+![Gestão de Ofertas](docs/screenshots/Gestão_Ofertas.png)
+
+### Adicionar Nova Oferta
+![Adicionar Oferta](docs/screenshots/Adicionar_Oferta.png)
+
+### Gestão de Criativos
+![Gestão de Criativos](docs/screenshots/Gestão_Criativos.png)
+
+### Adicionar Novo Criativo
+![Adicionar Criativo](docs/screenshots/Adicionar_Criativo.png)
+
+### Alerta de Demonstração
+![Demonstração Aviso](docs/screenshots/Demonstração_Aviso.png)
+
+### Ofertas Arquivadas
+![Ofertas Arquivadas](docs/screenshots/Ofertas_Arquivadas.png)
+
+### Restauração de Oferta Arquivada
+![Restauração Oferta Arquivada](docs/screenshots/Restauração_Oferta_Arquivada.png)
+
+### Criativos Arquivados
+![Criativos Arquivados](docs/screenshots/Criativos_Arquivados.png)
+
+---
+
 ## Conceitos do Sistema
 
 O TrackFlow trabalha com 3 entidades principais em hierarquia:
