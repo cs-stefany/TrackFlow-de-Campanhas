@@ -30,7 +30,7 @@ import { ThresholdsDialog } from '@/components/ThresholdsDialog';
 import { formatCurrency, formatRoas, getMetricStatus, getMetricClass, copyToClipboard } from '@/lib/metrics';
 import { formatDate } from '@/lib/format';
 import { parseThresholds, type Thresholds, type Criativo, type MetricaDiariaOferta } from '@/services/api';
-import { useOferta, useMetricasOferta, useCriativosPorOferta, useCopywriters, useCriativosComMedias } from '@/hooks/useSupabase';
+import { useOferta, useMetricasOferta, useCriativosPorOferta, useCopywriters, useMetricasDiariasComCriativo } from '@/hooks/useSupabase';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -97,7 +97,11 @@ export default function OfferDetails() {
   const { data: criativosFB, isLoading: isLoadingFB, refetch: refetchFB } = useCriativosPorOferta(id || '', 'facebook');
   const { data: criativosYT, isLoading: isLoadingYT, refetch: refetchYT } = useCriativosPorOferta(id || '', 'youtube');
   const { data: criativosTT, isLoading: isLoadingTT, refetch: refetchTT } = useCriativosPorOferta(id || '', 'tiktok');
-  const { data: criativosComMedias, refetch: refetchCriativosMedias } = useCriativosComMedias({ ofertaId: id || '' });
+  const { data: metricasCriativos, refetch: refetchCriativosMedias } = useMetricasDiariasComCriativo({
+    ofertaId: id || '',
+    dataInicio: periodo.dataInicio,
+    dataFim: periodo.dataFim,
+  });
   const { data: copywriters } = useCopywriters();
 
   const isLoading = isLoadingOferta || isLoadingMetricas;
@@ -112,42 +116,58 @@ export default function OfferDetails() {
     toast.success('Dados atualizados!');
   };
 
-  // Get metrics for a creative from the view based on period
-  const getCreativeMetrics = (criativoId: string) => {
-    const metrics = criativosComMedias?.find(m => m.id === criativoId);
-    if (!metrics) return { spend: 0, roas: 0, ic: 0, cpc: 0 };
+  const creativeMetricsById = useMemo(() => {
+    const grouped = new Map<string, {
+      spend: number;
+      faturado: number;
+      icTotal: number;
+      icCount: number;
+      cpcTotal: number;
+      cpcCount: number;
+    }>();
 
-    // Select metrics based on period
-    if (periodo.tipo === 'today') {
-      return {
-        spend: metrics.spend_hoje || 0,
-        roas: metrics.roas_hoje || 0,
-        ic: metrics.ic_hoje || 0,
-        cpc: metrics.cpc_hoje || 0,
+    for (const metric of metricasCriativos || []) {
+      const creativeId = metric.criativo?.id;
+      if (!creativeId) continue;
+
+      const current = grouped.get(creativeId) || {
+        spend: 0,
+        faturado: 0,
+        icTotal: 0,
+        icCount: 0,
+        cpcTotal: 0,
+        cpcCount: 0,
       };
-    } else if (periodo.tipo === '3d') {
-      return {
-        spend: metrics.spend_3d || 0,
-        roas: metrics.roas_3d || 0,
-        ic: metrics.ic_3d || 0,
-        cpc: metrics.cpc_3d || 0,
-      };
-    } else if (periodo.tipo === '7d') {
-      return {
-        spend: metrics.spend_7d || 0,
-        roas: metrics.roas_7d || 0,
-        ic: metrics.ic_7d || 0,
-        cpc: metrics.cpc_7d || 0,
-      };
-    } else {
-      // Para 30d, custom e all, usar 7d como fallback
-      return {
-        spend: metrics.spend_7d || 0,
-        roas: metrics.roas_7d || 0,
-        ic: metrics.ic_7d || 0,
-        cpc: metrics.cpc_7d || 0,
-      };
+
+      current.spend += metric.spend || 0;
+      current.faturado += metric.faturado || 0;
+      if (metric.ic !== null && metric.ic !== undefined) {
+        current.icTotal += metric.ic;
+        current.icCount += 1;
+      }
+      if (metric.cpc !== null && metric.cpc !== undefined) {
+        current.cpcTotal += metric.cpc;
+        current.cpcCount += 1;
+      }
+      grouped.set(creativeId, current);
     }
+
+    const result = new Map<string, { spend: number; roas: number; ic: number; cpc: number }>();
+    grouped.forEach((metric, creativeId) => {
+      result.set(creativeId, {
+        spend: metric.spend,
+        roas: metric.spend > 0 ? metric.faturado / metric.spend : 0,
+        ic: metric.icCount > 0 ? metric.icTotal / metric.icCount : 0,
+        cpc: metric.cpcCount > 0 ? metric.cpcTotal / metric.cpcCount : 0,
+      });
+    });
+
+    return result;
+  }, [metricasCriativos]);
+
+  // Métricas do criativo no período selecionado
+  const getCreativeMetrics = (criativoId: string) => {
+    return creativeMetricsById.get(criativoId) || { spend: 0, roas: 0, ic: 0, cpc: 0 };
   };
 
   // Parse thresholds from the offer
@@ -156,20 +176,6 @@ export default function OfferDetails() {
     return convertThresholds(parseThresholds(oferta.thresholds));
   }, [oferta?.thresholds]);
 
-  // Calculate totals from daily metrics
-  const totals = useMemo(() => {
-    if (!metricasOferta || metricasOferta.length === 0) {
-      return { spend: 0, faturado: 0, roas: 0, lucro: 0 };
-    }
-    
-    const spend = metricasOferta.reduce((acc, m) => acc + (m.spend || 0), 0);
-    const faturado = metricasOferta.reduce((acc, m) => acc + (m.faturado || 0), 0);
-    const roas = spend > 0 ? faturado / spend : 0;
-    const lucro = faturado - spend;
-    
-    return { spend, faturado, roas, lucro };
-  }, [metricasOferta]);
-
   // Filter daily metrics by date range
   const filteredDailyMetrics = useMemo(() => {
     if (!metricasOferta) return [];
@@ -177,17 +183,32 @@ export default function OfferDetails() {
     let filtered = [...metricasOferta];
     
     // Apply date filter
-    const startDate = new Date(periodo.dataInicio);
-    const endDate = new Date(periodo.dataFim);
-    
-    filtered = filtered.filter((m) => {
-      const metricDate = new Date(m.data);
-      return metricDate >= startDate && metricDate <= endDate;
-    });
+    filtered = filtered.filter((m) => m.data >= periodo.dataInicio && m.data <= periodo.dataFim);
     
     // Sort by date descending
     return filtered.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
   }, [metricasOferta, periodo.dataInicio, periodo.dataFim]);
+
+  // Totais sempre acompanham o período visível
+  const totals = useMemo(() => {
+    if (filteredDailyMetrics.length === 0) {
+      return { spend: 0, faturado: 0, roas: 0, lucro: 0, ic: 0, cpc: 0 };
+    }
+
+    const spend = filteredDailyMetrics.reduce((acc, metric) => acc + (metric.spend || 0), 0);
+    const faturado = filteredDailyMetrics.reduce((acc, metric) => acc + (metric.faturado || 0), 0);
+    const icValues = filteredDailyMetrics.filter(metric => metric.ic !== null).map(metric => metric.ic || 0);
+    const cpcValues = filteredDailyMetrics.filter(metric => metric.cpc !== null).map(metric => metric.cpc || 0);
+
+    return {
+      spend,
+      faturado,
+      roas: spend > 0 ? faturado / spend : 0,
+      lucro: faturado - spend,
+      ic: icValues.length > 0 ? icValues.reduce((acc, value) => acc + value, 0) / icValues.length : 0,
+      cpc: cpcValues.length > 0 ? cpcValues.reduce((acc, value) => acc + value, 0) / cpcValues.length : 0,
+    };
+  }, [filteredDailyMetrics]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -217,11 +238,11 @@ export default function OfferDetails() {
       return matchesStatus && matchesSearch && matchesCopy && notArchived;
     });
 
-    // Sort (basic sort - real metrics would need to come from criativos_com_medias view)
     if (sortField) {
       filtered = [...filtered].sort((a, b) => {
-        // Placeholder sort since we don't have metrics here yet
-        return sortDirection === 'asc' ? 1 : -1;
+        const aValue = getCreativeMetrics(a.id)[sortField];
+        const bValue = getCreativeMetrics(b.id)[sortField];
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
       });
     }
 
@@ -260,8 +281,8 @@ export default function OfferDetails() {
         </h3>
 
         {/* Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 max-w-sm">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="relative col-span-2 min-w-0 flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por ID..."
@@ -273,7 +294,7 @@ export default function OfferDetails() {
           {/* Esconde filtro de status quando oferta está arquivada (todos criativos são arquivados) */}
           {oferta?.status !== 'arquivado' && (
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -286,7 +307,7 @@ export default function OfferDetails() {
             </Select>
           )}
           <Select value={copyFilter} onValueChange={setCopyFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[180px]">
               <SelectValue placeholder="Copywriter" />
             </SelectTrigger>
             <SelectContent>
@@ -300,15 +321,16 @@ export default function OfferDetails() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
+            className="col-span-2 w-full sm:w-auto"
           />
           {/* Botões de lançar métricas ao lado do filtro de período */}
           {oferta?.status !== 'arquivado' && (
             <>
-              <Button className="gap-2" onClick={() => setIsBulkDialogOpen(true)}>
+              <Button className="h-11 gap-2 sm:h-10" onClick={() => setIsBulkDialogOpen(true)}>
                 <FileSpreadsheet className="h-4 w-4" />
                 Importar CSV
               </Button>
-              <Button className="gap-2" onClick={() => openLancarMetrica(fonte)}>
+              <Button className="h-11 gap-2 sm:h-10" onClick={() => openLancarMetrica(fonte)}>
                 <Plus className="h-4 w-4" />
                 Lançar Métrica
               </Button>
@@ -317,13 +339,13 @@ export default function OfferDetails() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border border-border bg-card">
+        <div className="overflow-hidden rounded-xl border border-border bg-card">
           {isLoadingCreatives ? (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[680px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
@@ -422,28 +444,29 @@ export default function OfferDetails() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate(fromPath)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground">{oferta.nome}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-bold tracking-tight text-foreground sm:text-2xl">{oferta.nome}</h1>
           <p className="text-sm text-muted-foreground">{oferta.nicho} • {oferta.pais}</p>
         </div>
-        <Button variant="outline" className="gap-2" onClick={() => setIsThresholdsDialogOpen(true)}>
+        <Button variant="outline" className="h-11 gap-2 sm:h-10" onClick={() => setIsThresholdsDialogOpen(true)}>
           <Settings className="h-4 w-4" />
-          Métricas Esperadas
+          <span className="hidden sm:inline">Métricas Esperadas</span>
+          <span className="sm:hidden">Metas</span>
         </Button>
-        <Button variant="outline" className="gap-2" onClick={handleRefreshAll}>
+        <Button variant="outline" className="h-11 gap-2 sm:h-10" onClick={handleRefreshAll}>
           <RefreshCw className="h-4 w-4" />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* Main KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <KPICard
           label="Spend Total"
           value={formatCurrency(totals.spend)}
@@ -467,19 +490,19 @@ export default function OfferDetails() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
-          <TabsTrigger value="daily">Resultado Diário</TabsTrigger>
-          <TabsTrigger value="fb">
+        <TabsList className="flex h-auto w-full max-w-none justify-start gap-1 overflow-x-auto p-1 sm:grid sm:max-w-2xl sm:grid-cols-4">
+          <TabsTrigger value="daily" className="min-w-max px-3 py-2 text-xs sm:min-w-0">Resultado Diário</TabsTrigger>
+          <TabsTrigger value="fb" className="min-w-max px-3 py-2 text-xs sm:min-w-0">
             Criativos FB ({oferta?.status === 'arquivado'
               ? criativosFB?.length || 0
               : criativosFB?.filter(c => c.status !== 'arquivado').length || 0})
           </TabsTrigger>
-          <TabsTrigger value="yt">
+          <TabsTrigger value="yt" className="min-w-max px-3 py-2 text-xs sm:min-w-0">
             Criativos YT ({oferta?.status === 'arquivado'
               ? criativosYT?.length || 0
               : criativosYT?.filter(c => c.status !== 'arquivado').length || 0})
           </TabsTrigger>
-          <TabsTrigger value="tt">
+          <TabsTrigger value="tt" className="min-w-max px-3 py-2 text-xs sm:min-w-0">
             Criativos TT ({oferta?.status === 'arquivado'
               ? criativosTT?.length || 0
               : criativosTT?.filter(c => c.status !== 'arquivado').length || 0})
@@ -494,16 +517,17 @@ export default function OfferDetails() {
                 value={periodo} 
                 onChange={setPeriodo}
                 showAllOption
+                className="w-full sm:w-auto"
               />
             </div>
 
-            <Card className="p-0 overflow-hidden">
+            <Card className="overflow-hidden p-0">
               {isLoadingMetricas ? (
                 <div className="flex items-center justify-center h-32">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <Table>
+                <Table className="min-w-[760px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Dia</TableHead>
@@ -613,8 +637,8 @@ export default function OfferDetails() {
         oferta={oferta}
         metricas={{
           roas: totals.roas,
-          ic: 0, // Placeholder - would need to calculate from metrics
-          cpc: 0, // Placeholder - would need to calculate from metrics
+          ic: totals.ic,
+          cpc: totals.cpc,
         }}
       />
     </div>

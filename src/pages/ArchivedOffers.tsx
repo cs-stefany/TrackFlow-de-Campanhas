@@ -158,7 +158,7 @@ export default function ArchivedOffers() {
       setCriativosToRestore([]);
       setSelectedCriativoIds(new Set());
     } catch (error) {
-      toast.error('Nao foi possivel restaurar a oferta.');
+      toast.error('Não foi possível restaurar a oferta.');
     }
   };
 
@@ -167,12 +167,12 @@ export default function ArchivedOffers() {
 
     try {
       await deleteOferta.mutateAsync(selectedOffer.id);
-      toast.success(`"${selectedOffer.nome}" foi excluida permanentemente.`);
+      toast.success(`"${selectedOffer.nome}" foi excluída permanentemente.`);
       setIsDeleteDialogOpen(false);
       setSelectedOffer(null);
       setDeleteConfirmName('');
     } catch (error) {
-      toast.error('Nao foi possivel excluir a oferta. Verifique se nao ha criativos vinculados.');
+      toast.error('Não foi possível excluir a oferta. Verifique se não há criativos vinculados.');
     }
   };
 
@@ -192,28 +192,28 @@ export default function ArchivedOffers() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/ofertas')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground">Ofertas Arquivadas</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Ofertas Arquivadas</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {filteredOffers.length} oferta(s) arquivada(s)
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh}>
+        <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-9" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar oferta arquivada..."
@@ -223,7 +223,7 @@ export default function ArchivedOffers() {
             />
           </div>
           <Select value={nicheFilter} onValueChange={setNicheFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Nicho" />
             </SelectTrigger>
             <SelectContent>
@@ -234,11 +234,11 @@ export default function ArchivedOffers() {
             </SelectContent>
           </Select>
           <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Pais" />
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+              <SelectValue placeholder="País" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos Paises</SelectItem>
+              <SelectItem value="all">Todos os Países</SelectItem>
               {(paises || []).map((pais) => (
                 <SelectItem key={pais.id} value={pais.nome}>{pais.nome}</SelectItem>
               ))}
@@ -248,6 +248,7 @@ export default function ArchivedOffers() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
+            className="w-full sm:w-auto"
           />
         </div>
       </Card>
@@ -258,7 +259,7 @@ export default function ArchivedOffers() {
           <p>Nenhuma oferta arquivada encontrada.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {filteredOffers.map((offer) => (
             <div key={offer.id} className="relative">
               <OfferCard
@@ -409,13 +410,13 @@ export default function ArchivedOffers() {
           <DialogHeader>
             <DialogTitle className="text-destructive">Excluir Oferta Permanentemente</DialogTitle>
             <DialogDescription>
-              Esta acao nao pode ser desfeita. Todos os dados da oferta serao perdidos permanentemente.
+              Esta ação não pode ser desfeita. Todos os dados da oferta serão perdidos permanentemente.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
               <p className="text-sm text-destructive font-medium mb-2">
-                Voce esta prestes a excluir: <strong>{selectedOffer?.nome}</strong>
+                Você está prestes a excluir: <strong>{selectedOffer?.nome}</strong>
               </p>
               <p className="text-xs text-destructive/80">
                 Para confirmar, digite exatamente o nome da oferta abaixo:

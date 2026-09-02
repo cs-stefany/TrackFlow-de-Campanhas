@@ -66,9 +66,9 @@ Acompanhamento do progresso de implementação do sistema.
 
 ### 1.9 Performance e UX
 - [ ] Tempo de carregamento < 2 segundos
-- [ ] Interface responsiva (funciona no celular)
+- [x] Interface responsiva (funciona no celular)
 - [x] Feedback visual em todas as ações (loading, success, error)
-- [ ] Não há erros no console do navegador
+- [x] Não há erros no console do navegador
 
 ### 1.10 Qualidade
 - [ ] Testado com dados reais de pelo menos 1 oferta

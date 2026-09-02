@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import type { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 // Re-export types for convenience
 export type Oferta = Tables<'ofertas'>;
@@ -31,7 +31,7 @@ export interface ThresholdHistorico {
   oferta_id: string;
   thresholds: Thresholds;
   data_inicio: string;
-  created_at: string;
+  created_at: string | null;
 }
 
 // ==================== OFERTAS ====================
@@ -70,7 +70,7 @@ export async function createOferta(oferta: OfertaInsert) {
 
   // Inserir threshold inicial no histórico
   if (data && oferta.thresholds) {
-    await insertThresholdHistorico(data.id, oferta.thresholds as Thresholds);
+    await insertThresholdHistorico(data.id, parseThresholds(oferta.thresholds));
   }
 
   return data;
@@ -79,7 +79,7 @@ export async function createOferta(oferta: OfertaInsert) {
 export async function updateOferta(id: string, updates: OfertaUpdate) {
   // Se estiver atualizando thresholds, inserir no histórico
   if (updates.thresholds) {
-    await insertThresholdHistorico(id, updates.thresholds as Thresholds);
+    await insertThresholdHistorico(id, parseThresholds(updates.thresholds));
   }
 
   const { data, error } = await supabase
@@ -361,7 +361,7 @@ export async function createMetricasBatch(metricas: MetricaDiariaInsert[]) {
 
   const { data, error } = await supabase
     .from('metricas_diarias')
-    .insert(metricas)
+    .upsert(metricas, { onConflict: 'criativo_id,data' })
     .select();
 
   if (error) throw error;
@@ -696,7 +696,11 @@ export async function insertThresholdHistorico(
     .upsert(
       {
         oferta_id: ofertaId,
-        thresholds: thresholds,
+        thresholds: {
+          roas: { verde: thresholds.roas.verde, amarelo: thresholds.roas.amarelo },
+          ic: { verde: thresholds.ic.verde, amarelo: thresholds.ic.amarelo },
+          cpc: { verde: thresholds.cpc.verde, amarelo: thresholds.cpc.amarelo },
+        } satisfies Json,
         data_inicio: data,
       },
       { onConflict: 'oferta_id,data_inicio' }
@@ -741,16 +745,18 @@ export function getDateRange(period: string): { dataInicio: string; dataFim: str
     case 'today':
       dataInicio = dataFim;
       break;
-    case '7d':
+    case '7d': {
       const seteDias = new Date(hoje);
       seteDias.setDate(seteDias.getDate() - 6);
       dataInicio = seteDias.toISOString().split('T')[0];
       break;
-    case '30d':
+    }
+    case '30d': {
       const trintaDias = new Date(hoje);
       trintaDias.setDate(trintaDias.getDate() - 29);
       dataInicio = trintaDias.toISOString().split('T')[0];
       break;
+    }
     case 'all':
     default:
       dataInicio = '2020-01-01';
@@ -771,9 +777,19 @@ export function parseThresholds(thresholds: unknown): Thresholds {
     return defaultThresholds;
   }
   
+  const source = thresholds as Record<string, unknown>;
+  const parseMetric = (value: unknown, fallback: { verde: number; amarelo: number }) => {
+    if (!value || typeof value !== 'object') return fallback;
+    const metric = value as Record<string, unknown>;
+    return {
+      verde: typeof metric.verde === 'number' ? metric.verde : fallback.verde,
+      amarelo: typeof metric.amarelo === 'number' ? metric.amarelo : fallback.amarelo,
+    };
+  };
+
   return {
-    roas: (thresholds as any).roas || defaultThresholds.roas,
-    ic: (thresholds as any).ic || defaultThresholds.ic,
-    cpc: (thresholds as any).cpc || defaultThresholds.cpc,
+    roas: parseMetric(source.roas, defaultThresholds.roas),
+    ic: parseMetric(source.ic, defaultThresholds.ic),
+    cpc: parseMetric(source.cpc, defaultThresholds.cpc),
   };
 }

@@ -4,12 +4,12 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 /**
- * Format currency value in EUR (Euro)
+ * Formata valores monetários em real brasileiro
  */
 export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('de-DE', {
+  return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'EUR',
+    currency: 'BRL',
   }).format(value);
 };
 

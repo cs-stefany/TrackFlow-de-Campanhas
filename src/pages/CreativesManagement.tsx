@@ -74,7 +74,7 @@ import {
   type MetricaDiariaComCriativo,
   type Thresholds,
 } from '@/hooks/useSupabase';
-import { parseThresholds, type Criativo } from '@/services/api';
+import { parseThresholds, type Criativo, type CriativoUpdate } from '@/services/api';
 
 type SortField = 'date' | null;
 type SortDirection = 'asc' | 'desc';
@@ -392,7 +392,7 @@ export default function CreativesManagement() {
     if (!editingCreative) return;
 
     try {
-      const updates: Record<string, any> = {};
+      const updates: CriativoUpdate = {};
 
       if (editOffer !== (editingCreative.oferta_id || '')) updates.oferta_id = editOffer;
       if (editId !== editingCreative.id_unico) updates.id_unico = editId;
@@ -437,20 +437,20 @@ export default function CreativesManagement() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gestão de Criativos</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {(criativos || []).length} criativo(s) cadastrado(s)
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <Button 
             variant="outline" 
             size="sm" 
-            className="gap-2"
+            className="h-11 gap-2 sm:h-9"
             onClick={async () => {
               await refetch();
               toast.success('Dados atualizados!');
@@ -466,12 +466,12 @@ export default function CreativesManagement() {
           </Button>
           <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <SheetTrigger asChild>
-              <Button className="gap-2">
+              <Button className="h-11 gap-2 sm:h-10">
                 <Plus className="h-4 w-4" />
                 Novo Criativo
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-[550px] sm:max-w-xl">
+            <SheetContent className="w-full max-w-full sm:w-[550px] sm:max-w-xl">
               <SheetHeader>
                 <SheetTitle>Novo Criativo</SheetTitle>
                 <SheetDescription>
@@ -516,7 +516,7 @@ export default function CreativesManagement() {
                       </p>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label htmlFor="source">Fonte <span className="text-destructive">*</span></Label>
                       <Select value={newFonte} onValueChange={setNewFonte}>
@@ -602,8 +602,8 @@ export default function CreativesManagement() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por ID..."
@@ -613,7 +613,7 @@ export default function CreativesManagement() {
             />
           </div>
           <Select value={offerFilter} onValueChange={setOfferFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Oferta" />
             </SelectTrigger>
             <SelectContent>
@@ -624,7 +624,7 @@ export default function CreativesManagement() {
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Fonte" />
             </SelectTrigger>
             <SelectContent>
@@ -636,7 +636,7 @@ export default function CreativesManagement() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -648,7 +648,7 @@ export default function CreativesManagement() {
             </SelectContent>
           </Select>
           <Select value={copywriterFilter} onValueChange={setCopywriterFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Copywriter" />
             </SelectTrigger>
             <SelectContent>
@@ -662,6 +662,7 @@ export default function CreativesManagement() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
+            className="w-full sm:w-auto"
           />
         </div>
       </Card>
@@ -749,8 +750,8 @@ export default function CreativesManagement() {
         </div>
       ) : (
         /* Table - now shows one row per criativo + day */
-        <Card className="p-0">
-          <Table>
+        <Card className="overflow-hidden p-0">
+          <Table className="min-w-[860px]">
             <TableHeader>
               <TableRow>
                 <SortableHeader field="date" className="text-center">Data</SortableHeader>
@@ -767,7 +768,7 @@ export default function CreativesManagement() {
               {sortedMetricas.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    Nenhuma metrica encontrada para o periodo selecionado.
+                    Nenhuma métrica encontrada para o período selecionado.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -818,7 +819,7 @@ export default function CreativesManagement() {
                               </TooltipTrigger>
                               <TooltipContent>Ver métricas</TooltipContent>
                             </Tooltip>
-                            <PopoverContent className="w-[520px] p-0" align="end" side="left">
+                            <PopoverContent className="w-[calc(100vw-2rem)] max-w-[520px] p-0" align="end" side="left">
                               <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
                                 <span className="font-semibold text-sm">Métricas do Criativo</span>
                                 <span className="text-xs text-muted-foreground">{formatDate(metrica.data)}</span>
@@ -854,7 +855,7 @@ export default function CreativesManagement() {
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">Conversões</span>
-                                    <span className="text-xs font-medium">{(metrica.conversoes || 0).toLocaleString('de-DE')}</span>
+                                    <span className="text-xs font-medium">{(metrica.conversoes || 0).toLocaleString('pt-BR')}</span>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">Cliques</span>
@@ -862,7 +863,7 @@ export default function CreativesManagement() {
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">Impressões</span>
-                                    <span className="text-xs font-medium">{(metrica.impressoes || 0).toLocaleString('de-DE')}</span>
+                                    <span className="text-xs font-medium">{(metrica.impressoes || 0).toLocaleString('pt-BR')}</span>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">CTR</span>
@@ -942,7 +943,7 @@ export default function CreativesManagement() {
               </div>
 
               {/* Source and Copywriter */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Fonte</Label>
                   <Select value={editSource} onValueChange={setEditSource}>
@@ -1044,7 +1045,7 @@ export default function CreativesManagement() {
               <Label className="text-muted-foreground">ID do Criativo</Label>
               <Input value={editId} disabled className="bg-muted font-mono" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label className="text-muted-foreground">Oferta</Label>
                 <Input value={getOfferNameById(editOffer)} disabled className="bg-muted" />
@@ -1054,7 +1055,7 @@ export default function CreativesManagement() {
                 <Input value={fonteLabels[editSource] || editSource} disabled className="bg-muted" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label className="text-muted-foreground">Copywriter</Label>
                 <Input value={editCopywriter || '-'} disabled className="bg-muted" />

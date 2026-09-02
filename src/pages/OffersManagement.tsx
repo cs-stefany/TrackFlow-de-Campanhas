@@ -73,7 +73,7 @@ import {
   useThresholdsVigentesBatch,
   type Thresholds,
 } from '@/hooks/useSupabase';
-import { parseThresholds, type Oferta, type MetricaDiariaOfertaComJoin } from '@/services/api';
+import { parseThresholds, type Oferta, type OfertaUpdate, type MetricaDiariaOfertaComJoin } from '@/services/api';
 
 type SortField = 'roas' | 'ic' | 'cpc' | 'date' | null;
 type SortDirection = 'asc' | 'desc';
@@ -346,7 +346,7 @@ export default function OffersManagement() {
         await archiveOfertaMutation.mutateAsync(editingOffer.id);
 
         // Se houver outras alterações além do status, aplicá-las também
-        const otherUpdates: Record<string, any> = {};
+        const otherUpdates: OfertaUpdate = {};
         if (editName !== editingOffer.nome) otherUpdates.nome = editName;
         if (editNiche !== editingOffer.nicho) otherUpdates.nicho = editNiche;
         if (editCountry !== editingOffer.pais) otherUpdates.pais = editCountry;
@@ -361,7 +361,7 @@ export default function OffersManagement() {
         toast.success('Oferta arquivada com sucesso. Todos os criativos vinculados também foram arquivados.');
       } else {
         // Atualização normal (sem arquivamento)
-        const updates: Record<string, any> = {};
+        const updates: OfertaUpdate = {};
 
         if (editName !== editingOffer.nome) updates.nome = editName;
         if (editNiche !== editingOffer.nicho) updates.nicho = editNiche;
@@ -429,20 +429,20 @@ export default function OffersManagement() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gestão de Ofertas</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {(ofertas || []).filter(o => o.status !== 'arquivado').length} oferta(s) cadastrada(s)
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <Button 
             variant="outline" 
             size="sm" 
-            className="gap-2"
+            className="h-11 gap-2 sm:h-9"
             onClick={handleRefresh}
             disabled={isLoadingMetricas}
           >
@@ -455,12 +455,12 @@ export default function OffersManagement() {
           </Button>
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
-              <Button className="gap-2">
+              <Button className="h-11 gap-2 sm:h-10">
                 <Plus className="h-4 w-4" />
                 Nova Oferta
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-[550px] sm:max-w-xl">
+            <SheetContent className="w-full max-w-full sm:w-[550px] sm:max-w-xl">
               <SheetHeader>
                 <SheetTitle>Nova Oferta</SheetTitle>
                 <SheetDescription>
@@ -478,7 +478,7 @@ export default function OffersManagement() {
                       onChange={(e) => setNewOfferName(e.target.value)}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label htmlFor="niche">Nicho <span className="text-destructive">*</span></Label>
                       <CreatableCombobox
@@ -529,7 +529,7 @@ export default function OffersManagement() {
                     <p className="text-xs text-muted-foreground mb-3">
                       Defina quando o ROAS é considerado excelente, atenção ou crítico
                     </p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="grid gap-2">
                         <Label className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-success" />
@@ -572,7 +572,7 @@ export default function OffersManagement() {
                     <p className="text-xs text-muted-foreground mb-3">
                       Defina quando o IC é considerado excelente, atenção ou crítico
                     </p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="grid gap-2">
                         <Label className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-success" />
@@ -613,7 +613,7 @@ export default function OffersManagement() {
                     <p className="text-xs text-muted-foreground mb-3">
                       Defina quando o CPC é considerado excelente, atenção ou crítico
                     </p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="grid gap-2">
                         <Label className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-success" />
@@ -670,8 +670,8 @@ export default function OffersManagement() {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome..."
@@ -681,7 +681,7 @@ export default function OffersManagement() {
             />
           </div>
           <Select value={nicheFilter} onValueChange={setNicheFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Nicho" />
             </SelectTrigger>
             <SelectContent>
@@ -692,7 +692,7 @@ export default function OffersManagement() {
             </SelectContent>
           </Select>
           <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="País" />
             </SelectTrigger>
             <SelectContent>
@@ -703,7 +703,7 @@ export default function OffersManagement() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -713,7 +713,7 @@ export default function OffersManagement() {
             </SelectContent>
           </Select>
           <Select value={healthFilter} onValueChange={setHealthFilter}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
               <SelectValue placeholder="Saúde" />
             </SelectTrigger>
             <SelectContent>
@@ -742,6 +742,7 @@ export default function OffersManagement() {
             value={periodo} 
             onChange={setPeriodo}
             showAllOption
+            className="w-full sm:w-auto"
           />
         </div>
       </Card>
@@ -818,8 +819,8 @@ export default function OffersManagement() {
         </div>
       ) : (
         /* Table */
-        <Card className="p-0">
-          <Table>
+        <Card className="overflow-hidden p-0">
+          <Table className="min-w-[880px]">
             <TableHeader>
               <TableRow>
                 <SortableHeader field="date" className="text-center">Data</SortableHeader>
@@ -980,7 +981,7 @@ export default function OffersManagement() {
 
       {/* Edit Sheet */}
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-        <SheetContent className="w-[550px] sm:max-w-xl">
+        <SheetContent className="w-full max-w-full sm:w-[550px] sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Editar Oferta</SheetTitle>
             <SheetDescription>
@@ -1000,7 +1001,7 @@ export default function OffersManagement() {
               </div>
 
               {/* Niche and Country */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <Label>Nicho</Label>
                   <CreatableCombobox
@@ -1079,7 +1080,7 @@ export default function OffersManagement() {
               <Label className="text-muted-foreground">Nome</Label>
               <Input value={editName} disabled className="bg-muted" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label className="text-muted-foreground">Nicho</Label>
                 <Input value={editNiche} disabled className="bg-muted" />

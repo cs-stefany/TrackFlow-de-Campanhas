@@ -171,7 +171,7 @@ export function ThresholdsDialog({
         <div className="space-y-6 pb-2">
           {/* Offer Info - Always read-only */}
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <div>
                 <Label className="text-xs text-muted-foreground">Oferta</Label>
                 <p className="font-medium">{oferta.nome}</p>
@@ -262,7 +262,7 @@ export function ThresholdsDialog({
                 {/* ROAS */}
                 <div className="space-y-2">
                   <Label>ROAS (maior é melhor)</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <Label className="text-xs text-muted-foreground">Verde &gt;</Label>
                       <Input
@@ -289,7 +289,7 @@ export function ThresholdsDialog({
                 {/* IC */}
                 <div className="space-y-2">
                   <Label>IC - Custo por Conversão (menor é melhor)</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <Label className="text-xs text-muted-foreground">Verde &lt;</Label>
                       <Input
@@ -316,7 +316,7 @@ export function ThresholdsDialog({
                 {/* CPC */}
                 <div className="space-y-2">
                   <Label>CPC - Custo por Clique (menor é melhor)</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <Label className="text-xs text-muted-foreground">Verde &lt;</Label>
                       <Input

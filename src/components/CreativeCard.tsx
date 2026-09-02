@@ -78,8 +78,7 @@ export function CreativeCard({ criativo, oferta, metrics, onClick }: CreativeCar
               "h-2.5 w-2.5 rounded-full",
               health === 'success' && "bg-success",
               health === 'warning' && "bg-warning",
-              health === 'danger' && "bg-danger",
-              health === 'default' && "bg-muted-foreground"
+              health === 'danger' && "bg-danger"
             )} />
             <h3
               className="font-mono text-sm font-semibold text-foreground truncate cursor-pointer hover:text-primary hover:underline transition-colors"

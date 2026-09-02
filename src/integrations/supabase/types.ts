@@ -294,6 +294,38 @@ export type Database = {
         }
         Relationships: []
       }
+      ofertas_thresholds_historico: {
+        Row: {
+          created_at: string | null
+          data_inicio: string
+          id: string
+          oferta_id: string
+          thresholds: Json
+        }
+        Insert: {
+          created_at?: string | null
+          data_inicio: string
+          id?: string
+          oferta_id: string
+          thresholds: Json
+        }
+        Update: {
+          created_at?: string | null
+          data_inicio?: string
+          id?: string
+          oferta_id?: string
+          thresholds?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ofertas_thresholds_historico_oferta_id_fkey"
+            columns: ["oferta_id"]
+            isOneToOne: false
+            referencedRelation: "ofertas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       paises: {
         Row: {
           codigo: string | null

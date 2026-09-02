@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { fetchCriativoByIdUnico, checkMetricaExiste } from '@/services/api';
@@ -43,14 +42,24 @@ function parseData(dataStr: string): string | null {
   if (!dataStr) return null;
 
   // Formato YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
-    return dataStr;
+  const isValidDate = (year: number, month: number, day: number) => {
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+  };
+
+  const isoMatch = dataStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch.map(Number);
+    return isValidDate(year, month, day) ? dataStr : null;
   }
 
   // Formato DD/MM/YYYY
   const match = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (match) {
-    return `${match[3]}-${match[2]}-${match[1]}`;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    return isValidDate(year, month, day) ? `${match[3]}-${match[2]}-${match[1]}` : null;
   }
 
   return null;
@@ -59,16 +68,48 @@ function parseData(dataStr: string): string | null {
 // Parser de número (aceita vírgula ou ponto como decimal)
 function parseNumero(valor: string): number | null {
   if (!valor || valor.trim() === '') return null;
-  const normalizado = valor.replace(',', '.').trim();
+  let normalizado = valor.replace(/[^\d,.-]/g, '').trim();
+  if (normalizado.includes(',') && normalizado.includes('.')) {
+    normalizado = normalizado.lastIndexOf(',') > normalizado.lastIndexOf('.')
+      ? normalizado.replace(/\./g, '').replace(',', '.')
+      : normalizado.replace(/,/g, '');
+  } else if (normalizado.includes(',')) {
+    normalizado = normalizado.replace(',', '.');
+  }
   const num = parseFloat(normalizado);
-  return isNaN(num) ? null : num;
+  return Number.isFinite(num) ? num : null;
 }
 
 // Parser de inteiro
 function parseInteiro(valor: string): number | null {
   if (!valor || valor.trim() === '') return null;
-  const num = parseInt(valor.trim(), 10);
-  return isNaN(num) ? null : num;
+  const normalizado = valor.replace(/[^\d-]/g, '');
+  const num = parseInt(normalizado, 10);
+  return Number.isFinite(num) ? num : null;
+}
+
+function parseCSVLine(line: string, separator: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index];
+    if (character === '"' && line[index + 1] === '"' && quoted) {
+      current += '"';
+      index += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+    } else if (character === separator && !quoted) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += character;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
 }
 
 export function BulkMetricasDialog({
@@ -95,7 +136,7 @@ export function BulkMetricasDialog({
     onOpenChange(false);
   };
 
-  const parseCSV = async (content: string) => {
+  const parseCSV = useCallback(async (content: string) => {
     setIsProcessing(true);
 
     const lines = content.split(/\r?\n/).filter(line => line.trim());
@@ -111,7 +152,7 @@ export function BulkMetricasDialog({
     const separator = header.includes(';') ? ';' : ',';
 
     // Mapear colunas do header
-    const colunas = header.toLowerCase().split(separator).map(c => c.trim());
+    const colunas = parseCSVLine(header.toLowerCase(), separator);
     const colIdx = {
       id_criativo: colunas.findIndex(c => c.includes('id_criativo') || c.includes('id') || c.includes('criativo')),
       data: colunas.findIndex(c => c === 'data' || c === 'date'),
@@ -136,7 +177,7 @@ export function BulkMetricasDialog({
     const rows: ParsedRow[] = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const valores = lines[i].split(separator).map(v => v.trim());
+      const valores = parseCSVLine(lines[i], separator);
 
       if (valores.length < 7) continue; // Linha incompleta
 
@@ -194,7 +235,7 @@ export function BulkMetricasDialog({
 
     setParsedRows(rows);
     setIsProcessing(false);
-  };
+  }, [ofertaId]);
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.name.endsWith('.csv')) {
@@ -213,7 +254,7 @@ export function BulkMetricasDialog({
       toast.error('Erro ao ler arquivo.');
     };
     reader.readAsText(file);
-  }, [ofertaId]);
+  }, [parseCSV]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -390,8 +431,8 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
             </div>
 
             {/* Table Preview */}
-            <ScrollArea className="h-[350px] rounded-md border">
-              <table className="w-full text-sm">
+            <div className="h-[350px] overflow-auto rounded-md border">
+              <table className="min-w-[860px] text-sm">
                 <thead className="bg-muted sticky top-0">
                   <tr>
                     <th className="p-2 text-left font-medium">Linha</th>
@@ -451,7 +492,7 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
                   ))}
                 </tbody>
               </table>
-            </ScrollArea>
+            </div>
           </div>
         )}
 

@@ -75,7 +75,7 @@ export const queryKeys = {
     byCriativo: (criativoId: string, periodo?: string) => ['metricas', 'criativo', criativoId, periodo] as const,
     byOferta: (ofertaId: string, periodo?: string) => ['metricas', 'oferta', ofertaId, periodo] as const,
     diariasComOferta: (filters?: Record<string, string>) => ['metricas', 'diariasComOferta', filters] as const,
-    diariasComCriativo: (filters?: any) => ['metricas', 'diarias', 'comCriativo', filters] as const,
+    diariasComCriativo: (filters?: Record<string, string | undefined>) => ['metricas', 'diarias', 'comCriativo', filters] as const,
     aggregatedByOferta: (ofertaId: string) => ['metricas', 'aggregated', ofertaId] as const,
     allAggregated: () => ['metricas', 'allAggregated'] as const,
     totais: () => ['metricas', 'totais'] as const,
@@ -443,7 +443,7 @@ export interface MetricaDiariaComCriativo {
     oferta: {
       id: string;
       nome: string;
-      thresholds: any;
+      thresholds: unknown;
     } | null;
   } | null;
 }
@@ -485,7 +485,19 @@ export function useMetricasDiariasComCriativo(filters?: {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data || []) as MetricaDiariaComCriativo[];
+      let result = (data || []) as MetricaDiariaComCriativo[];
+
+      if (filters?.ofertaId) {
+        result = result.filter(metric => metric.criativo?.oferta_id === filters.ofertaId);
+      }
+      if (filters?.fonte) {
+        result = result.filter(metric => metric.criativo?.fonte === filters.fonte);
+      }
+      if (filters?.copywriter) {
+        result = result.filter(metric => metric.criativo?.copy_responsavel === filters.copywriter);
+      }
+
+      return result;
     },
   });
 }

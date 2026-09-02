@@ -1,5 +1,5 @@
 import { ReactNode, useState, createContext, useContext } from 'react';
-import { AppSidebar } from '@/components/AppSidebar';
+import { AppSidebar, MobileNavigation } from '@/components/AppSidebar';
 import { cn } from '@/lib/utils';
 
 interface SidebarContextType {
@@ -25,11 +25,12 @@ export function MainLayout({ children }: MainLayoutProps) {
     <SidebarContext.Provider value={{ collapsed, setCollapsed }}>
       <div className="min-h-screen bg-background">
         <AppSidebar />
+        <MobileNavigation />
         <main className={cn(
-          "transition-all duration-300",
-          collapsed ? "pl-16" : "pl-64"
+          "min-w-0 pb-24 transition-[padding] duration-300 md:pb-0",
+          collapsed ? "md:pl-16" : "md:pl-64"
         )}>
-          <div className="p-6 max-w-[1600px] mx-auto">
+          <div className="mx-auto max-w-[1600px] p-4 sm:p-5 lg:p-6">
             {children}
           </div>
         </main>

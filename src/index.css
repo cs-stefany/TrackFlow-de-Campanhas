@@ -8,7 +8,7 @@
 @layer base {
   :root {
     /* Base Colors - Light Theme */
-    --background: 225 25% 97%;
+    --background: 220 33% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -36,7 +36,7 @@
     --input: 220 13% 91%;
     --ring: 222 47% 11%;
 
-    --radius: 0.5rem;
+    --radius: 0.875rem;
 
     /* Semantic Colors for Metrics */
     --success: 160 84% 39%;
@@ -131,6 +131,17 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: "Inter", system-ui, sans-serif;
+    min-width: 320px;
+    overflow-x: hidden;
+    background-image: radial-gradient(circle at top right, hsl(217 91% 60% / 0.07), transparent 30rem);
+  }
+
+  button,
+  a,
+  input,
+  textarea,
+  [role="combobox"] {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -152,7 +163,7 @@
   }
 
   .card-hover {
-    @apply transition-all duration-200 hover:shadow-md hover:border-primary/20;
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-primary/20;
   }
 
   .kpi-value {

@@ -44,7 +44,7 @@ interface LancarMetricaDialogProps {
 const STATUS_LABELS: Record<string, string> = {
   liberado: "Liberado",
   em_teste: "Em Teste",
-  nao_validado: "Nao Validado",
+  nao_validado: "Não Validado",
   pausado: "Pausado",
   arquivado: "Arquivado",
 };
@@ -336,8 +336,8 @@ export function LancarMetricaDialog({
       await upsertMetricaMutation.mutateAsync(metricData);
 
       toast.success(existingMetric
-        ? 'Metricas atualizadas com sucesso!'
-        : 'Metricas salvas com sucesso!'
+        ? 'Métricas atualizadas com sucesso!'
+        : 'Métricas salvas com sucesso!'
       );
 
       handleOpenChange(false);
@@ -355,18 +355,18 @@ export function LancarMetricaDialog({
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {step === 1 && "Lancar Metricas - Selecionar Criativo"}
-            {step === 2 && "Lancar Metricas - Confirmar Criativo"}
-            {step === 3 && "Lancar Metricas - Selecionar Data"}
-            {step === "new_form" && "Lancar Metricas - Preencher Valores"}
-            {step === "edit_existing" && "Lancar Metricas - Editar Valores"}
-            {step === 4 && "Lancar Metricas - Revisao Final"}
+            {step === 1 && "Lançar Métricas - Selecionar Criativo"}
+            {step === 2 && "Lançar Métricas - Confirmar Criativo"}
+            {step === 3 && "Lançar Métricas - Selecionar Data"}
+            {step === "new_form" && "Lançar Métricas - Preencher Valores"}
+            {step === "edit_existing" && "Lançar Métricas - Editar Valores"}
+            {step === 4 && "Lançar Métricas - Revisão Final"}
           </DialogTitle>
           <DialogDescription>
-            {step === 1 && "Selecione o criativo para lancar as metricas diarias."}
+            {step === 1 && "Selecione o criativo para lançar as métricas diárias."}
             {step === 2 && "Confirme o criativo selecionado antes de continuar."}
-            {step === 3 && "Selecione a data das metricas."}
-            {step === "new_form" && "Preencha os valores das metricas. Todos os campos sao obrigatorios."}
+            {step === 3 && "Selecione a data das métricas."}
+            {step === "new_form" && "Preencha os valores das métricas. Todos os campos são obrigatórios."}
             {step === "edit_existing" && "Selecione os campos que deseja editar e altere os valores."}
             {step === 4 && "Revise os dados antes de salvar."}
           </DialogDescription>
@@ -387,7 +387,7 @@ export function LancarMetricaDialog({
               </div>
               {!fonteProp && (
                 <Select value={fonteFilter} onValueChange={setFonteFilter}>
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
                     <SelectValue placeholder="Fonte" />
                   </SelectTrigger>
                   <SelectContent>
@@ -442,9 +442,9 @@ export function LancarMetricaDialog({
         {step === 2 && selectedCriativo && (
           <div className="space-y-4">
             <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <Label className="text-xs text-muted-foreground">ID Unico</Label>
+                  <Label className="text-xs text-muted-foreground">ID Único</Label>
                   <p
                     className="font-medium font-mono cursor-pointer hover:text-primary hover:underline transition-colors"
                     onClick={() => {
@@ -547,7 +547,7 @@ export function LancarMetricaDialog({
             {isCheckingMetric && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Verificando metricas existentes...</span>
+                <span className="text-sm">Verificando métricas existentes...</span>
               </div>
             )}
 
@@ -556,7 +556,7 @@ export function LancarMetricaDialog({
               <Alert className="border-yellow-500/50 bg-yellow-500/10">
                 <AlertTriangle className="h-4 w-4 text-yellow-500" />
                 <AlertDescription className="text-yellow-700 dark:text-yellow-400">
-                  <p className="font-medium mb-2">Ja existem metricas para esta data!</p>
+                  <p className="font-medium mb-2">Já existem métricas para esta data!</p>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <div>
                       <span className="text-muted-foreground">Spend:</span>{" "}
@@ -567,7 +567,7 @@ export function LancarMetricaDialog({
                       <span className="font-medium">R$ {(existingMetric.faturado || 0).toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Impressoes:</span>{" "}
+                      <span className="text-muted-foreground">Impressões:</span>{" "}
                       <span className="font-medium">{(existingMetric.impressoes || 0).toLocaleString('pt-BR')}</span>
                     </div>
                     <div>
@@ -575,7 +575,7 @@ export function LancarMetricaDialog({
                       <span className="font-medium">{(existingMetric.cliques || 0).toLocaleString('pt-BR')}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Conversoes:</span>{" "}
+                      <span className="text-muted-foreground">Conversões:</span>{" "}
                       <span className="font-medium">{(existingMetric.conversoes || 0).toLocaleString('pt-BR')}</span>
                     </div>
                   </div>
@@ -600,7 +600,7 @@ export function LancarMetricaDialog({
                   </Button>
                 ) : (
                   <Button onClick={() => setStep("new_form")} disabled={!data || isCheckingMetric}>
-                    Preencher Metricas
+                    Preencher Métricas
                     <Check className="h-4 w-4 ml-1" />
                   </Button>
                 )}
@@ -624,7 +624,7 @@ export function LancarMetricaDialog({
             </div>
 
             {/* Metrics Fields */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="spend">Spend (R$) <span className="text-destructive">*</span></Label>
                 <Input
@@ -652,7 +652,7 @@ export function LancarMetricaDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="impressoes">Impressoes <span className="text-destructive">*</span></Label>
+                <Label htmlFor="impressoes">Impressões <span className="text-destructive">*</span></Label>
                 <Input
                   id="impressoes"
                   type="number"
@@ -676,7 +676,7 @@ export function LancarMetricaDialog({
                 />
               </div>
               <div className="space-y-2 col-span-2 sm:col-span-1">
-                <Label htmlFor="conversoes">Conversoes <span className="text-destructive">*</span></Label>
+                <Label htmlFor="conversoes">Conversões <span className="text-destructive">*</span></Label>
                 <Input
                   id="conversoes"
                   type="number"
@@ -793,7 +793,7 @@ export function LancarMetricaDialog({
                 />
                 <div className="flex-1">
                   <Label htmlFor="edit-impressoes" className="text-sm font-medium cursor-pointer">
-                    Impressoes
+                    Impressões
                   </Label>
                   <p className="text-xs text-muted-foreground">
                     Atual: {(existingMetric.impressoes || 0).toLocaleString('pt-BR')}
@@ -847,7 +847,7 @@ export function LancarMetricaDialog({
                 />
                 <div className="flex-1">
                   <Label htmlFor="edit-conversoes" className="text-sm font-medium cursor-pointer">
-                    Conversoes
+                    Conversões
                   </Label>
                   <p className="text-xs text-muted-foreground">
                     Atual: {(existingMetric.conversoes || 0).toLocaleString('pt-BR')}
@@ -931,7 +931,7 @@ export function LancarMetricaDialog({
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground">Spend</p>
                       <p className="font-semibold text-lg">R$ {parseFloat(spend || '0').toFixed(2)}</p>
@@ -941,7 +941,7 @@ export function LancarMetricaDialog({
                       <p className="font-semibold text-lg">R$ {parseFloat(faturado || '0').toFixed(2)}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-muted-foreground">Impressoes</p>
+                      <p className="text-xs text-muted-foreground">Impressões</p>
                       <p className="font-semibold">{parseInt(impressoes || '0').toLocaleString('pt-BR')}</p>
                     </div>
                     <div className="text-center">
@@ -949,14 +949,14 @@ export function LancarMetricaDialog({
                       <p className="font-semibold">{parseInt(cliques || '0').toLocaleString('pt-BR')}</p>
                     </div>
                     <div className="text-center col-span-2">
-                      <p className="text-xs text-muted-foreground">Conversoes</p>
+                      <p className="text-xs text-muted-foreground">Conversões</p>
                       <p className="font-semibold">{parseInt(conversoes || '0').toLocaleString('pt-BR')}</p>
                     </div>
                   </div>
 
                   {/* Calculated Metrics Preview */}
                   <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground text-center mb-2">Metricas Calculadas</p>
+                    <p className="text-xs text-muted-foreground text-center mb-2">Métricas Calculadas</p>
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div>
                         <p className="text-xs text-muted-foreground">ROAS</p>

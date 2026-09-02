@@ -1,8 +1,10 @@
-import { LayoutDashboard, Tags, Video, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
+import { useState } from 'react';
+import { LayoutDashboard, Tags, Video, ChevronLeft, ChevronRight, Archive, MoreHorizontal } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useSidebarContext } from '@/components/MainLayout';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const navigation = [
   { name: 'Painel', href: '/', icon: LayoutDashboard },
@@ -25,7 +27,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r border-border bg-card transition-all duration-300',
+        'fixed left-0 top-0 z-40 hidden h-screen border-r border-border bg-card transition-all duration-300 md:block',
         collapsed ? 'w-16' : 'w-64'
       )}
     >
@@ -146,5 +148,91 @@ export function AppSidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+export function MobileNavigation() {
+  const location = useLocation();
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const isArchiveRoute = location.pathname.includes('arquivad');
+
+  return (
+    <>
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/80 bg-background/90 px-4 backdrop-blur md:hidden">
+        <NavLink to="/" className="flex items-center gap-2.5" aria-label="Ir para o painel">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-sm">
+            <span className="text-sm font-bold text-primary-foreground">TF</span>
+          </div>
+          <div>
+            <p className="text-base font-semibold leading-none text-foreground">TrackFlow</p>
+            <p className="mt-1 text-[11px] leading-none text-muted-foreground">Campanhas em foco</p>
+          </div>
+        </NavLink>
+        <span className="rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
+          Online
+        </span>
+      </header>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-card/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur md:hidden" aria-label="Navegação principal">
+        <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+          {navigation.map((item) => {
+            const isActive = item.href === '/'
+              ? location.pathname === '/'
+              : location.pathname === item.href || location.pathname.startsWith(`${item.href}/`);
+
+            return (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                className={cn(
+                  'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-medium transition-colors',
+                  isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground active:bg-muted'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.href === '/' ? 'Painel' : item.href === '/ofertas' ? 'Ofertas' : 'Criativos'}</span>
+              </NavLink>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setArchiveOpen(true)}
+            className={cn(
+              'flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[11px] font-medium transition-colors',
+              isArchiveRoute ? 'bg-primary text-primary-foreground' : 'text-muted-foreground active:bg-muted'
+            )}
+            aria-label="Abrir itens arquivados"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            <span>Arquivo</span>
+          </button>
+        </div>
+      </nav>
+
+      <Sheet open={archiveOpen} onOpenChange={setArchiveOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 md:hidden">
+          <SheetHeader className="text-left">
+            <SheetTitle>Itens arquivados</SheetTitle>
+            <SheetDescription>Consulte, restaure ou exclua itens antigos.</SheetDescription>
+          </SheetHeader>
+          <div className="mt-5 grid gap-2">
+            {archiveNavigation.map((item) => (
+              <NavLink
+                key={item.href}
+                to={item.href}
+                onClick={() => setArchiveOpen(false)}
+                className={({ isActive }) => cn(
+                  'flex min-h-14 items-center gap-3 rounded-2xl border px-4 text-sm font-medium transition-colors',
+                  isActive ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground active:bg-muted'
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.name}
+              </NavLink>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trash2, RotateCcw, Search, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -136,10 +136,10 @@ export default function ArchivedCreatives() {
     return matchesSearch && matchesOffer && matchesSource && matchesCopywriter;
   });
 
-  const getOffer = (offerId: string | null): Oferta | null => {
+  const getOffer = useCallback((offerId: string | null): Oferta | null => {
     if (!offerId) return null;
     return (ofertas || []).find((o) => o.id === offerId) || null;
-  };
+  }, [ofertas]);
 
   // Verifica se o criativo foi arquivado automaticamente junto com a oferta
   const wasArchivedWithOffer = (criativo: Criativo): boolean => {
@@ -234,7 +234,7 @@ export default function ArchivedCreatives() {
     if (!metricsCreative) return convertThresholds(parseThresholds(null));
     const offer = getOffer(metricsCreative.oferta_id);
     return convertThresholds(parseThresholds(offer?.thresholds || null));
-  }, [metricsCreative, ofertas]);
+  }, [metricsCreative, getOffer]);
 
   if (isLoading) {
     return (
@@ -245,28 +245,28 @@ export default function ArchivedCreatives() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap sm:gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/criativos')}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-foreground">Criativos Arquivados</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Criativos Arquivados</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {filteredCreatives.length} criativo(s) arquivado(s)
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleRefresh}>
+        <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-9" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
+          <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
+          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por ID do criativo..."
@@ -276,7 +276,7 @@ export default function ArchivedCreatives() {
             />
           </div>
           <Select value={offerFilter} onValueChange={setOfferFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[180px]">
               <SelectValue placeholder="Oferta" />
             </SelectTrigger>
             <SelectContent>
@@ -287,7 +287,7 @@ export default function ArchivedCreatives() {
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[130px]">
               <SelectValue placeholder="Fonte" />
             </SelectTrigger>
             <SelectContent>
@@ -298,7 +298,7 @@ export default function ArchivedCreatives() {
             </SelectContent>
           </Select>
           <Select value={copywriterFilter} onValueChange={setCopywriterFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[180px]">
               <SelectValue placeholder="Copywriter" />
             </SelectTrigger>
             <SelectContent>
@@ -312,6 +312,7 @@ export default function ArchivedCreatives() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
+            className="w-full sm:w-auto"
           />
         </div>
       </Card>
@@ -322,7 +323,7 @@ export default function ArchivedCreatives() {
           <p>Nenhum criativo arquivado encontrado.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {filteredCreatives.map(({ criativo, metrics }) => (
             <div key={criativo.id} className="relative">
               <CreativeCard
@@ -412,7 +413,7 @@ export default function ArchivedCreatives() {
           </DialogHeader>
 
           {/* Summary */}
-          <div className="grid grid-cols-5 gap-4 p-4 bg-muted/50 rounded-lg">
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-4 sm:grid-cols-5 sm:gap-4">
             <div className="text-center">
               <p className="text-xs text-muted-foreground">Spend Total</p>
               <p className="text-lg font-semibold">{formatCurrency(metricsTotals.spend)}</p>

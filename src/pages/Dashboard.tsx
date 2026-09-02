@@ -98,17 +98,17 @@ export default function Dashboard() {
   }, [paises]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Painel de Ofertas</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Painel de Ofertas</h1>
           <p className="text-sm text-muted-foreground mt-1">Visão geral de performance</p>
         </div>
         <Button 
           variant="outline" 
           size="sm" 
-          className="gap-2"
+          className="h-11 shrink-0 gap-2 sm:h-9"
           onClick={handleRefresh}
           disabled={isLoading}
         >
@@ -122,7 +122,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <KPIDualCard
           leftLabel="Spend Total"
           leftValue={isLoadingTotais ? '...' : formatCurrency(totais?.total.spend || 0)}
@@ -162,8 +162,8 @@ export default function Dashboard() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 p-4 bg-card rounded-lg border border-border shadow-card">
-        <div className="flex-1 min-w-[200px]">
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-card sm:flex sm:flex-wrap sm:items-center">
+        <div className="min-w-0 flex-1 sm:min-w-[200px]">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -175,7 +175,7 @@ export default function Dashboard() {
           </div>
         </div>
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'ativo' | 'pausado')}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -184,7 +184,7 @@ export default function Dashboard() {
           </SelectContent>
         </Select>
         <Select value={nicheFilter} onValueChange={setNicheFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
             <SelectValue placeholder="Nicho" />
           </SelectTrigger>
           <SelectContent>
@@ -195,7 +195,7 @@ export default function Dashboard() {
           </SelectContent>
         </Select>
         <Select value={countryFilter} onValueChange={setCountryFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
             <SelectValue placeholder="País" />
           </SelectTrigger>
           <SelectContent>
@@ -206,7 +206,7 @@ export default function Dashboard() {
           </SelectContent>
         </Select>
         <Select value={healthFilter} onValueChange={setHealthFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
             <SelectValue placeholder="Saúde" />
           </SelectTrigger>
           <SelectContent>
@@ -242,7 +242,7 @@ export default function Dashboard() {
 
       {/* Offer Cards Grid */}
       {!isLoadingOfertas && filteredOffers.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {filteredOffers.map((offer) => (
             <OfferCard 
               key={offer.id} 

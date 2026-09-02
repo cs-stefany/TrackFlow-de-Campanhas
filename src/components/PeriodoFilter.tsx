@@ -38,9 +38,7 @@ function formatLocalDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  const result = `${year}-${month}-${day}`;
-  console.log('[DEBUG] formatLocalDate:', { date: date.toString(), result });
-  return result;
+  return `${year}-${month}-${day}`;
 }
 
 function getDateRange(tipo: PeriodoTipo): { dataInicio: string; dataFim: string } {
@@ -96,7 +94,7 @@ export function usePeriodo(initialTipo: PeriodoTipo = '7d') {
         ...range,
       }));
     }
-  }, []); // Executa apenas na montagem
+  }, [periodo.tipo]);
 
   return { periodo, setPeriodo };
 }
@@ -158,9 +156,9 @@ export function PeriodoFilter({
   }, [value.tipo, value.dataInicio, value.dataFim]);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>
       <Select value={value.tipo} onValueChange={(v) => handleTipoChange(v as PeriodoTipo)}>
-        <SelectTrigger className="w-[150px]">
+        <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
           <SelectValue placeholder="Período" />
         </SelectTrigger>
         <SelectContent>
@@ -175,7 +173,7 @@ export function PeriodoFilter({
       {value.tipo === 'custom' && (
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="h-11 min-w-0 flex-1 gap-2 sm:h-10">
               <CalendarIcon className="h-4 w-4" />
               {dateRange.from ? (
                 dateRange.to ? (
@@ -195,7 +193,7 @@ export function PeriodoFilter({
               mode="range"
               selected={{ from: dateRange.from, to: dateRange.to }}
               onSelect={(range) => handleDateRangeChange({ from: range?.from, to: range?.to })}
-              numberOfMonths={2}
+              numberOfMonths={1}
               className="p-3 pointer-events-auto"
             />
           </PopoverContent>
