@@ -472,15 +472,15 @@ export default function CreativesManagement() {
                 Novo Criativo
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-full max-w-full sm:w-[550px] sm:max-w-xl">
-              <SheetHeader>
+            <SheetContent className="flex h-[100dvh] w-full max-w-full flex-col overflow-hidden p-0 sm:w-[550px] sm:max-w-xl">
+              <SheetHeader className="shrink-0 px-6 pb-2 pt-6">
                 <SheetTitle>Novo Criativo</SheetTitle>
                 <SheetDescription>
                   Cadastre um novo criativo no sistema
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-180px)]">
-                <div className="grid gap-4 py-6 px-2">
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="grid gap-4 px-6 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="offer">Oferta <span className="text-destructive">*</span></Label>
                     <Select value={newOferta} onValueChange={setNewOferta}>
@@ -582,7 +582,7 @@ export default function CreativesManagement() {
                   </div>
                 </div>
               </ScrollArea>
-              <SheetFooter className="mt-4">
+              <SheetFooter className="grid shrink-0 grid-cols-2 gap-2 space-y-0 border-t bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
@@ -761,19 +761,19 @@ export default function CreativesManagement() {
             <div className="flex-shrink-0 mt-0.5">
               <div className="h-2 w-2 rounded-full bg-warning" />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground mb-2">
                 {criativosSemMetricas.length} criativo(s) sem métricas no período selecionado
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-2 sm:flex sm:flex-wrap">
                 {criativosSemMetricas.map((criativo) => (
                   <div
                     key={criativo.id}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-background border cursor-pointer hover:border-primary/50 transition-colors"
+                    className="flex w-full min-w-0 items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:border-primary/50 sm:w-auto"
                     onClick={() => openEditDialog(criativo.id)}
                   >
                     <span
-                      className="font-mono text-xs cursor-pointer hover:text-primary hover:underline transition-colors"
+                      className="min-w-0 flex-1 truncate font-mono text-xs transition-colors hover:text-primary hover:underline sm:flex-none"
                       onClick={(e) => {
                         e.stopPropagation();
                         copyToClipboard(criativo.id_unico);

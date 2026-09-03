@@ -270,7 +270,7 @@ export default function ArchivedCreatives() {
           <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por ID do criativo..."
+              placeholder="Buscar por ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-11 bg-white pl-9 dark:bg-zinc-950"
@@ -444,10 +444,10 @@ export default function ArchivedCreatives() {
       <Dialog open={isMetricsDialogOpen} onOpenChange={setIsMetricsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex min-w-0 flex-col items-start gap-1 pr-6 sm:flex-row sm:items-center sm:gap-2">
               Histórico de Métricas -
               <span
-                className="font-mono cursor-pointer hover:text-primary hover:underline transition-colors"
+                className="max-w-full truncate font-mono transition-colors hover:text-primary hover:underline"
                 onClick={() => {
                   if (metricsCreative?.id_unico) {
                     navigator.clipboard.writeText(metricsCreative.id_unico);
@@ -509,7 +509,37 @@ export default function ArchivedCreatives() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : selectedCreativeMetrics && selectedCreativeMetrics.length > 0 ? (
-            <Table>
+            <>
+              <div className="grid gap-3 sm:hidden">
+                {selectedCreativeMetrics.map((metric) => {
+                  const spend = metric.spend || 0;
+                  const faturado = metric.faturado || 0;
+                  const roas = spend > 0 ? faturado / spend : 0;
+                  const ic = metric.ic || 0;
+                  const cpc = metric.cpc || 0;
+
+                  return (
+                    <Card key={metric.id} className="overflow-hidden p-0 shadow-sm">
+                      <div className="flex items-center justify-between border-b p-3">
+                        <span className="text-sm font-semibold">{formatDate(metric.data)}</span>
+                        <MetricBadge value={roas} metricType="roas" thresholds={metricsThresholds} format={formatRoas} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-5 gap-y-2 p-3 text-sm">
+                        <span className="text-muted-foreground">Spend</span>
+                        <span className="text-right font-medium">{formatCurrency(spend)}</span>
+                        <span className="text-muted-foreground">Faturado</span>
+                        <span className="text-right font-medium">{formatCurrency(faturado)}</span>
+                        <span className="text-muted-foreground">IC</span>
+                        <span className={cn('text-right font-medium', getMetricClass(getMetricStatus(ic, 'ic', metricsThresholds)))}>{formatCurrency(ic)}</span>
+                        <span className="text-muted-foreground">CPC</span>
+                        <span className={cn('text-right font-medium', getMetricClass(getMetricStatus(cpc, 'cpc', metricsThresholds)))}>{formatCurrency(cpc)}</span>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+              <div className="hidden sm:block">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
@@ -561,7 +591,9 @@ export default function ArchivedCreatives() {
                   );
                 })}
               </TableBody>
-            </Table>
+              </Table>
+              </div>
+            </>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <p>Nenhuma métrica encontrada para este criativo.</p>

@@ -461,15 +461,15 @@ export default function OffersManagement() {
                 Nova Oferta
               </Button>
             </SheetTrigger>
-            <SheetContent className="w-full max-w-full sm:w-[550px] sm:max-w-xl">
-              <SheetHeader>
+            <SheetContent className="flex h-[100dvh] w-full max-w-full flex-col overflow-hidden p-0 sm:w-[550px] sm:max-w-xl">
+              <SheetHeader className="shrink-0 px-6 pb-2 pt-6">
                 <SheetTitle>Nova Oferta</SheetTitle>
                 <SheetDescription>
                   Cadastre uma nova oferta no sistema
                 </SheetDescription>
               </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-180px)]">
-                <div className="grid gap-4 py-6 px-2">
+              <ScrollArea className="min-h-0 flex-1">
+                <div className="grid gap-4 px-6 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="name">Nome da Oferta <span className="text-destructive">*</span></Label>
                     <Input 
@@ -650,7 +650,7 @@ export default function OffersManagement() {
                   </div>
                 </div>
               </ScrollArea>
-              <SheetFooter className="mt-4">
+              <SheetFooter className="grid shrink-0 grid-cols-2 gap-2 space-y-0 border-t bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6">
                 <Button variant="outline" onClick={() => setIsSheetOpen(false)}>
                   Cancelar
                 </Button>
@@ -841,18 +841,18 @@ export default function OffersManagement() {
             <div className="flex-shrink-0 mt-0.5">
               <div className="h-2 w-2 rounded-full bg-warning" />
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <h3 className="text-sm font-medium text-foreground mb-2">
                 {ofertasSemMetricas.length} oferta(s) sem métricas no período selecionado
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid gap-2 sm:flex sm:flex-wrap">
                 {ofertasSemMetricas.map((oferta) => (
                   <div
                     key={oferta.id}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-background border cursor-pointer hover:border-primary/50 transition-colors"
+                    className="flex w-full min-w-0 items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:border-primary/50 sm:w-auto"
                     onClick={() => openEditSheet(oferta)}
                   >
-                    <span className="text-sm font-medium">{oferta.nome}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium sm:flex-none">{oferta.nome}</span>
                     <StatusBadge status={mapStatusToDisplay(oferta.status || 'ativo')} />
                     <TooltipProvider delayDuration={100}>
                       <Tooltip>
@@ -1151,15 +1151,15 @@ export default function OffersManagement() {
 
       {/* Edit Sheet */}
       <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-        <SheetContent className="w-full max-w-full sm:w-[550px] sm:max-w-xl">
-          <SheetHeader>
+        <SheetContent className="flex h-[100dvh] w-full max-w-full flex-col overflow-hidden p-0 sm:w-[550px] sm:max-w-xl">
+          <SheetHeader className="shrink-0 px-6 pb-2 pt-6">
             <SheetTitle>Editar Oferta</SheetTitle>
             <SheetDescription>
               Altere as informações da oferta
             </SheetDescription>
           </SheetHeader>
-          <ScrollArea className="h-[calc(100vh-180px)]">
-            <div className="grid gap-4 py-6 px-2">
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="grid gap-4 px-6 py-4">
               {/* Name field */}
               <div className="grid gap-2">
                 <Label htmlFor="edit-name">Nome da Oferta</Label>
@@ -1219,7 +1219,7 @@ export default function OffersManagement() {
 
             </div>
           </ScrollArea>
-          <SheetFooter className="mt-4">
+          <SheetFooter className="grid shrink-0 grid-cols-2 gap-2 space-y-0 border-t bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>
               Cancelar
             </Button>

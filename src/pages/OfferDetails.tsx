@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { KPICard } from '@/components/KPICard';
+import { KPICard, KPIDualCard } from '@/components/KPICard';
+import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { MetricBadge } from '@/components/MetricBadge';
 import { LancarMetricaDialog } from '@/components/LancarMetricaDialog';
 import { BulkMetricasDialog } from '@/components/BulkMetricasDialog';
@@ -281,9 +282,92 @@ export default function OfferDetails() {
         </h3>
 
         {/* Filters */}
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
-          <div className="relative col-span-2 min-w-0 flex-1 sm:max-w-sm">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-11 pl-9"
+            />
+          </div>
+          <MobileFiltersSheet
+            activeCount={
+              Number(oferta?.status !== 'arquivado' && statusFilter !== 'all') +
+              Number(copyFilter !== 'all') +
+              Number(periodo.tipo !== '7d') +
+              Number(sortField !== null)
+            }
+            onClear={() => {
+              setStatusFilter('all');
+              setCopyFilter('all');
+              setSortField(null);
+              setSortDirection('desc');
+              setPeriodo({ ...periodo, tipo: '7d' });
+            }}
+          >
+            {oferta?.status !== 'arquivado' && (
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="liberado">Liberado</SelectItem>
+                  <SelectItem value="em_teste">Em Teste</SelectItem>
+                  <SelectItem value="pausado">Pausado</SelectItem>
+                  <SelectItem value="nao_validado">Não Validado</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={copyFilter} onValueChange={setCopyFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Copywriter" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Copywriters</SelectItem>
+                {copywriters?.map((copy) => <SelectItem key={copy.id} value={copy.nome}>{copy.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select
+              value={sortField ? `${sortField}-${sortDirection}` : 'default'}
+              onValueChange={(value) => {
+                if (value === 'default') {
+                  setSortField(null);
+                  setSortDirection('desc');
+                  return;
+                }
+                const [field, direction] = value.split('-') as [Exclude<SortField, null>, SortDirection];
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+            >
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Ordenar" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Ordem padrão</SelectItem>
+                <SelectItem value="spend-desc">Maior spend</SelectItem>
+                <SelectItem value="roas-desc">Maior ROAS</SelectItem>
+                <SelectItem value="ic-asc">Menor IC</SelectItem>
+                <SelectItem value="cpc-asc">Menor CPC</SelectItem>
+              </SelectContent>
+            </Select>
+            <PeriodoFilter value={periodo} onChange={setPeriodo} showAllOption className="w-full" />
+          </MobileFiltersSheet>
+        </div>
+
+        {oferta?.status !== 'arquivado' && (
+          <div className="grid grid-cols-2 gap-2 md:hidden">
+            <Button className="h-11 gap-2" onClick={() => setIsBulkDialogOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4" />
+              Importar CSV
+            </Button>
+            <Button className="h-11 gap-2" onClick={() => openLancarMetrica(fonte)}>
+              <Plus className="h-4 w-4" />
+              Lançar Métrica
+            </Button>
+          </div>
+        )}
+
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <div className="relative min-w-[220px] flex-1 md:max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por ID..."
               value={searchQuery}
@@ -291,10 +375,9 @@ export default function OfferDetails() {
               className="pl-9"
             />
           </div>
-          {/* Esconde filtro de status quando oferta está arquivada (todos criativos são arquivados) */}
           {oferta?.status !== 'arquivado' && (
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
+              <SelectTrigger className="h-10 w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -307,7 +390,7 @@ export default function OfferDetails() {
             </Select>
           )}
           <Select value={copyFilter} onValueChange={setCopyFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[180px]">
+            <SelectTrigger className="h-10 w-[180px]">
               <SelectValue placeholder="Copywriter" />
             </SelectTrigger>
             <SelectContent>
@@ -321,16 +404,16 @@ export default function OfferDetails() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
-            className="col-span-2 w-full sm:w-auto"
+            className="w-auto"
           />
           {/* Botões de lançar métricas ao lado do filtro de período */}
           {oferta?.status !== 'arquivado' && (
             <>
-              <Button className="h-11 gap-2 sm:h-10" onClick={() => setIsBulkDialogOpen(true)}>
+              <Button className="h-10 gap-2" onClick={() => setIsBulkDialogOpen(true)}>
                 <FileSpreadsheet className="h-4 w-4" />
                 Importar CSV
               </Button>
-              <Button className="h-11 gap-2 sm:h-10" onClick={() => openLancarMetrica(fonte)}>
+              <Button className="h-10 gap-2" onClick={() => openLancarMetrica(fonte)}>
                 <Plus className="h-4 w-4" />
                 Lançar Métrica
               </Button>
@@ -338,8 +421,67 @@ export default function OfferDetails() {
           )}
         </div>
 
-        {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {/* Mobile cards */}
+        {isLoadingCreatives ? (
+          <div className="flex h-32 items-center justify-center rounded-xl border bg-card md:hidden">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:hidden">
+            {filtered.length === 0 ? (
+              <Card className="p-6 text-center text-sm text-muted-foreground">
+                Nenhum criativo encontrado.
+              </Card>
+            ) : (
+              filtered.map((criativo) => {
+                const { spend, roas, ic, cpc } = getCreativeMetrics(criativo.id);
+
+                return (
+                  <Card key={criativo.id} className="overflow-hidden p-0 shadow-sm">
+                    <div className="flex items-start justify-between gap-3 p-4">
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          className="max-w-full truncate text-left font-mono text-sm font-semibold hover:text-primary"
+                          onClick={() => handleCopyId(criativo.id_unico)}
+                        >
+                          {criativo.id_unico}
+                        </button>
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                          {criativo.copy_responsavel || 'Sem copywriter'}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className={cn('shrink-0 whitespace-nowrap', STATUS_COLORS[criativo.status || 'em_teste'])}>
+                        {STATUS_LABELS[criativo.status || 'em_teste']}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 border-t bg-muted/25">
+                      <div className="border-b p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Spend</p>
+                        <p className="mt-1 whitespace-nowrap text-sm font-semibold tabular-nums">{formatCurrency(spend)}</p>
+                      </div>
+                      <div className="border-b border-l p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">ROAS</p>
+                        <MetricBadge className="mt-1" value={roas} metricType="roas" thresholds={thresholds} format={formatRoas} />
+                      </div>
+                      <div className="p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">IC</p>
+                        <MetricBadge className="mt-1" value={ic} metricType="ic" thresholds={thresholds} format={formatCurrency} />
+                      </div>
+                      <div className="border-l p-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">CPC</p>
+                        <MetricBadge className="mt-1" value={cpc} metricType="cpc" thresholds={thresholds} format={formatCurrency} />
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* Desktop table */}
+        <div className="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
           {isLoadingCreatives ? (
             <div className="flex items-center justify-center h-32">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -446,27 +588,53 @@ export default function OfferDetails() {
   return (
     <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(fromPath)}>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2 sm:gap-4">
+        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate(fromPath)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-xl font-bold tracking-tight text-foreground sm:text-2xl">{oferta.nome}</h1>
-          <p className="text-sm text-muted-foreground">{oferta.nicho} • {oferta.pais}</p>
+          <h1 className="line-clamp-2 break-words text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl">{oferta.nome}</h1>
+          <p className="mt-1 truncate text-sm text-muted-foreground">{oferta.nicho} • {oferta.pais}</p>
         </div>
-        <Button variant="outline" className="h-11 gap-2 sm:h-10" onClick={() => setIsThresholdsDialogOpen(true)}>
+        <Button
+          variant="outline"
+          className="h-11 w-11 shrink-0 gap-2 px-0 sm:h-10 sm:w-auto sm:px-4"
+          onClick={() => setIsThresholdsDialogOpen(true)}
+          aria-label="Métricas esperadas"
+        >
           <Settings className="h-4 w-4" />
           <span className="hidden sm:inline">Métricas Esperadas</span>
-          <span className="sm:hidden">Metas</span>
         </Button>
-        <Button variant="outline" className="h-11 gap-2 sm:h-10" onClick={handleRefreshAll}>
+        <Button
+          variant="outline"
+          className="h-11 w-11 shrink-0 gap-2 px-0 sm:h-10 sm:w-auto sm:px-4"
+          onClick={handleRefreshAll}
+          aria-label="Atualizar dados"
+        >
           <RefreshCw className="h-4 w-4" />
           <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>
 
       {/* Main KPIs */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+      <div className="grid gap-3 sm:hidden">
+        <KPIDualCard
+          leftLabel="Spend Total"
+          leftValue={formatCurrency(totals.spend)}
+          rightLabel="ROAS Total"
+          rightValue={formatRoas(totals.roas)}
+          rightVariant={getMetricStatus(totals.roas, 'roas', thresholds) as 'success' | 'warning' | 'danger' | 'default'}
+        />
+        <KPIDualCard
+          leftLabel="Faturamento"
+          leftValue={formatCurrency(totals.faturado)}
+          leftVariant="success"
+          rightLabel="Lucro Líquido"
+          rightValue={formatCurrency(totals.lucro)}
+          rightVariant={totals.lucro >= 0 ? 'success' : 'danger'}
+        />
+      </div>
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label="Spend Total"
           value={formatCurrency(totals.spend)}
@@ -490,19 +658,19 @@ export default function OfferDetails() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex h-auto w-full max-w-none justify-start gap-1 overflow-x-auto p-1 sm:grid sm:max-w-2xl sm:grid-cols-4">
-          <TabsTrigger value="daily" className="min-w-max px-3 py-2 text-xs sm:min-w-0">Resultado Diário</TabsTrigger>
-          <TabsTrigger value="fb" className="min-w-max px-3 py-2 text-xs sm:min-w-0">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 sm:max-w-2xl sm:grid-cols-4">
+          <TabsTrigger value="daily" className="min-w-0 px-2 py-2 text-xs">Resultado Diário</TabsTrigger>
+          <TabsTrigger value="fb" className="min-w-0 px-2 py-2 text-xs">
             Criativos FB ({oferta?.status === 'arquivado'
               ? criativosFB?.length || 0
               : criativosFB?.filter(c => c.status !== 'arquivado').length || 0})
           </TabsTrigger>
-          <TabsTrigger value="yt" className="min-w-max px-3 py-2 text-xs sm:min-w-0">
+          <TabsTrigger value="yt" className="min-w-0 px-2 py-2 text-xs">
             Criativos YT ({oferta?.status === 'arquivado'
               ? criativosYT?.length || 0
               : criativosYT?.filter(c => c.status !== 'arquivado').length || 0})
           </TabsTrigger>
-          <TabsTrigger value="tt" className="min-w-max px-3 py-2 text-xs sm:min-w-0">
+          <TabsTrigger value="tt" className="min-w-0 px-2 py-2 text-xs">
             Criativos TT ({oferta?.status === 'arquivado'
               ? criativosTT?.length || 0
               : criativosTT?.filter(c => c.status !== 'arquivado').length || 0})
@@ -512,16 +680,73 @@ export default function OfferDetails() {
         <TabsContent value="daily" className="mt-6">
           <div className="space-y-4">
             {/* Period filter for daily results */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3 rounded-xl border bg-card p-2.5 sm:justify-start sm:border-0 sm:bg-transparent sm:p-0">
+              <span className="text-sm font-medium sm:hidden">Período</span>
               <PeriodoFilter 
                 value={periodo} 
                 onChange={setPeriodo}
                 showAllOption
-                className="w-full sm:w-auto"
+                className="w-[210px] sm:w-auto"
               />
             </div>
 
-            <Card className="overflow-hidden p-0">
+            {isLoadingMetricas ? (
+              <Card className="flex h-32 items-center justify-center p-0 md:hidden">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </Card>
+            ) : (
+              <div className="grid gap-3 md:hidden">
+                {filteredDailyMetrics.length === 0 ? (
+                  <Card className="p-6 text-center text-sm text-muted-foreground">
+                    Nenhuma métrica encontrada para o período.
+                  </Card>
+                ) : (
+                  filteredDailyMetrics.map((metric) => {
+                    const faturado = metric.faturado || 0;
+                    const spend = metric.spend || 0;
+                    const roas = spend > 0 ? faturado / spend : 0;
+                    const ic = metric.ic || 0;
+                    const cpc = metric.cpc || 0;
+                    const lucro = faturado - spend;
+                    const mc = faturado > 0 ? (lucro / faturado) * 100 : 0;
+
+                    return (
+                      <Card key={metric.id} className="overflow-hidden p-0 shadow-sm">
+                        <div className="flex items-center justify-between gap-3 p-4">
+                          <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Resultado do dia</p>
+                            <p className="mt-1 font-semibold">{formatDate(metric.data)}</p>
+                          </div>
+                          <MetricBadge value={roas} metricType="roas" thresholds={thresholds} format={formatRoas} />
+                        </div>
+                        <div className="grid grid-cols-2 border-y bg-muted/25">
+                          <div className="p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Faturamento</p>
+                            <p className="mt-1 whitespace-nowrap font-semibold tabular-nums text-success">{formatCurrency(faturado)}</p>
+                          </div>
+                          <div className="border-l p-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Spend</p>
+                            <p className="mt-1 whitespace-nowrap font-semibold tabular-nums">{formatCurrency(spend)}</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-5 gap-y-2 p-4 text-sm">
+                          <span className="text-muted-foreground">IC</span>
+                          <span className={cn('text-right font-medium', getMetricClass(getMetricStatus(ic, 'ic', thresholds)))}>{formatCurrency(ic)}</span>
+                          <span className="text-muted-foreground">CPC</span>
+                          <span className={cn('text-right font-medium', getMetricClass(getMetricStatus(cpc, 'cpc', thresholds)))}>{formatCurrency(cpc)}</span>
+                          <span className="text-muted-foreground">Lucro</span>
+                          <span className={cn('text-right font-medium', lucro >= 0 ? 'text-success' : 'text-danger')}>{formatCurrency(lucro)}</span>
+                          <span className="text-muted-foreground">Margem</span>
+                          <span className="text-right font-medium">{mc.toFixed(1)}%</span>
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            <Card className="hidden overflow-hidden p-0 md:block">
               {isLoadingMetricas ? (
                 <div className="flex items-center justify-center h-32">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

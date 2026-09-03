@@ -334,8 +334,8 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] max-w-4xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5" />
             Importar Métricas via CSV
@@ -345,6 +345,7 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
           </DialogDescription>
         </DialogHeader>
 
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {parsedRows.length === 0 ? (
           // Upload Area
           <div className="space-y-4">
@@ -430,9 +431,45 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
               </Button>
             </div>
 
-            {/* Table Preview */}
-            <div className="h-[350px] overflow-auto rounded-md border">
-              <table className="min-w-[860px] text-sm">
+            {/* Results preview */}
+            <div className="h-[350px] overflow-y-auto rounded-md border">
+              <div className="grid gap-2 p-2 sm:hidden">
+                {parsedRows.map((row) => (
+                  <div
+                    key={row.linha}
+                    className={cn(
+                      'rounded-lg border p-3 text-sm',
+                      row.erro && !row.jaExiste && 'border-destructive/30 bg-destructive/10',
+                      row.jaExiste && 'border-warning/30 bg-warning/10',
+                      !row.erro && 'border-success/20 bg-success/5'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-mono text-xs font-semibold">{row.id_criativo}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Linha {row.linha} · {row.data}</p>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeRow(row.linha)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1.5 text-xs">
+                      <span className="text-muted-foreground">Spend</span><span className="text-right font-medium">{row.spend.toFixed(2)}</span>
+                      <span className="text-muted-foreground">Faturado</span><span className="text-right font-medium">{row.faturado.toFixed(2)}</span>
+                      <span className="text-muted-foreground">Impressões</span><span className="text-right font-medium">{row.impressoes}</span>
+                      <span className="text-muted-foreground">Cliques / Conversões</span><span className="text-right font-medium">{row.cliques} / {row.conversoes}</span>
+                    </div>
+                    <div className="mt-2 border-t pt-2 text-xs">
+                      {row.erro ? (
+                        <span className={row.jaExiste ? 'text-warning' : 'text-destructive'}>{row.erro}</span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Pronta para importar</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <table className="hidden min-w-[860px] text-sm sm:table">
                 <thead className="bg-muted sticky top-0">
                   <tr>
                     <th className="p-2 text-left font-medium">Linha</th>
@@ -495,8 +532,9 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
             </div>
           </div>
         )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={handleClose}>
             Cancelar
           </Button>
