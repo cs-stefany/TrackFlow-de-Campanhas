@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { OfferCard } from '@/components/OfferCard';
+import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { PeriodoFilter, usePeriodo } from '@/components/PeriodoFilter';
 import { toast } from 'sonner';
 import {
@@ -211,19 +212,59 @@ export default function ArchivedOffers() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
+      <Card className="p-3 md:p-4">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar oferta arquivada..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white dark:bg-zinc-950 border-border"
+              className="h-11 bg-white pl-9 dark:bg-zinc-950"
+            />
+          </div>
+          <MobileFiltersSheet
+            activeCount={
+              Number(nicheFilter !== 'all') +
+              Number(countryFilter !== 'all') +
+              Number(periodo.tipo !== 'all')
+            }
+            onClear={() => {
+              setNicheFilter('all');
+              setCountryFilter('all');
+              setPeriodo({ ...periodo, tipo: 'all' });
+            }}
+          >
+            <Select value={nicheFilter} onValueChange={setNicheFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Nicho" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Nichos</SelectItem>
+                {(nichos || []).map((nicho) => <SelectItem key={nicho.id} value={nicho.nome}>{nicho.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="País" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Países</SelectItem>
+                {(paises || []).map((pais) => <SelectItem key={pais.id} value={pais.nome}>{pais.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <PeriodoFilter value={periodo} onChange={setPeriodo} showAllOption className="w-full" />
+          </MobileFiltersSheet>
+        </div>
+
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar oferta arquivada..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white pl-9 dark:bg-zinc-950"
             />
           </div>
           <Select value={nicheFilter} onValueChange={setNicheFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Nicho" />
             </SelectTrigger>
             <SelectContent>
@@ -234,7 +275,7 @@ export default function ArchivedOffers() {
             </SelectContent>
           </Select>
           <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="País" />
             </SelectTrigger>
             <SelectContent>
@@ -248,7 +289,7 @@ export default function ArchivedOffers() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
-            className="w-full sm:w-auto"
+            className="w-auto"
           />
         </div>
       </Card>

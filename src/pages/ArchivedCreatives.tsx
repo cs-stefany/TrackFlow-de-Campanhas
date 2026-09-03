@@ -34,6 +34,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { CreativeCard } from '@/components/CreativeCard';
+import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { MetricBadge } from '@/components/MetricBadge';
 import { PeriodoFilter, usePeriodo } from '@/components/PeriodoFilter';
 import { formatDate } from '@/lib/format';
@@ -264,19 +265,70 @@ export default function ArchivedCreatives() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
+      <Card className="p-3 md:p-4">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por ID do criativo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white dark:bg-zinc-950 border-border"
+              className="h-11 bg-white pl-9 dark:bg-zinc-950"
+            />
+          </div>
+          <MobileFiltersSheet
+            activeCount={
+              Number(offerFilter !== 'all') +
+              Number(sourceFilter !== 'all') +
+              Number(copywriterFilter !== 'all') +
+              Number(periodo.tipo !== 'all')
+            }
+            onClear={() => {
+              setOfferFilter('all');
+              setSourceFilter('all');
+              setCopywriterFilter('all');
+              setPeriodo({ ...periodo, tipo: 'all' });
+            }}
+          >
+            <Select value={offerFilter} onValueChange={setOfferFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Oferta" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Ofertas</SelectItem>
+                {(ofertas || []).map((offer) => <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Fonte" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Fontes</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={copywriterFilter} onValueChange={setCopywriterFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Copywriter" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Copywriters</SelectItem>
+                {(copywriters || []).map((copy) => <SelectItem key={copy.id} value={copy.nome}>{copy.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <PeriodoFilter value={periodo} onChange={setPeriodo} showAllOption className="w-full" />
+          </MobileFiltersSheet>
+        </div>
+
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por ID do criativo..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white pl-9 dark:bg-zinc-950"
             />
           </div>
           <Select value={offerFilter} onValueChange={setOfferFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[180px]">
+            <SelectTrigger className="h-10 w-[180px]">
               <SelectValue placeholder="Oferta" />
             </SelectTrigger>
             <SelectContent>
@@ -287,7 +339,7 @@ export default function ArchivedCreatives() {
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[130px]">
+            <SelectTrigger className="h-10 w-[130px]">
               <SelectValue placeholder="Fonte" />
             </SelectTrigger>
             <SelectContent>
@@ -298,7 +350,7 @@ export default function ArchivedCreatives() {
             </SelectContent>
           </Select>
           <Select value={copywriterFilter} onValueChange={setCopywriterFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[180px]">
+            <SelectTrigger className="h-10 w-[180px]">
               <SelectValue placeholder="Copywriter" />
             </SelectTrigger>
             <SelectContent>
@@ -312,7 +364,7 @@ export default function ArchivedCreatives() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
-            className="w-full sm:w-auto"
+            className="w-auto"
           />
         </div>
       </Card>
