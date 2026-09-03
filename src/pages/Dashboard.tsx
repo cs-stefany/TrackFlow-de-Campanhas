@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { KPIDualCard } from '@/components/KPICard';
+import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { OfferCard } from '@/components/OfferCard';
 import { formatCurrency, formatRoas, getMetricStatus } from '@/lib/metrics';
 import { parseThresholds } from '@/services/api';
@@ -162,75 +163,136 @@ export default function Dashboard() {
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-card sm:flex sm:flex-wrap sm:items-center">
-        <div className="min-w-0 flex-1 sm:min-w-[200px]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar oferta..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white dark:bg-zinc-950 border-border"
-            />
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-card md:p-4">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="min-w-0 flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar oferta..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 bg-white pl-9 dark:bg-zinc-950"
+              />
+            </div>
           </div>
+          <MobileFiltersSheet
+            activeCount={
+              Number(statusFilter !== 'ativo') +
+              Number(nicheFilter !== 'all') +
+              Number(countryFilter !== 'all') +
+              Number(healthFilter !== 'all')
+            }
+            onClear={() => {
+              setStatusFilter('ativo');
+              setNicheFilter('all');
+              setCountryFilter('all');
+              setHealthFilter('all');
+            }}
+          >
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'ativo' | 'pausado')}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">Ativas</SelectItem>
+                <SelectItem value="pausado">Pausadas</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={nicheFilter} onValueChange={setNicheFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Nicho" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Nichos</SelectItem>
+                {nichosList.map((niche) => <SelectItem key={niche} value={niche}>{niche}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="País" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Países</SelectItem>
+                {paisesList.map((country) => <SelectItem key={country} value={country}>{country}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={healthFilter} onValueChange={setHealthFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Saúde" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Saúdes</SelectItem>
+                <SelectItem value="success">Verde</SelectItem>
+                <SelectItem value="warning">Amarelo</SelectItem>
+                <SelectItem value="danger">Vermelho</SelectItem>
+              </SelectContent>
+            </Select>
+          </MobileFiltersSheet>
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'ativo' | 'pausado')}>
-          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ativo">Ativas</SelectItem>
-            <SelectItem value="pausado">Pausadas</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={nicheFilter} onValueChange={setNicheFilter}>
-          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
-            <SelectValue placeholder="Nicho" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Nichos</SelectItem>
-            {nichosList.map((niche) => (
-              <SelectItem key={niche} value={niche}>{niche}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={countryFilter} onValueChange={setCountryFilter}>
-          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
-            <SelectValue placeholder="País" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos Países</SelectItem>
-            {paisesList.map((country) => (
-              <SelectItem key={country} value={country}>{country}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={healthFilter} onValueChange={setHealthFilter}>
-          <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
-            <SelectValue placeholder="Saúde" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas Saúdes</SelectItem>
-            <SelectItem value="success">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-success" />
-                Verde
-              </div>
-            </SelectItem>
-            <SelectItem value="warning">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-warning" />
-                Amarelo
-              </div>
-            </SelectItem>
-            <SelectItem value="danger">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-danger" />
-                Vermelho
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
+
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <div className="min-w-[200px] flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar oferta..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white pl-9 dark:bg-zinc-950"
+              />
+            </div>
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'ativo' | 'pausado')}>
+            <SelectTrigger className="h-10 w-[140px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ativo">Ativas</SelectItem>
+              <SelectItem value="pausado">Pausadas</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={nicheFilter} onValueChange={setNicheFilter}>
+            <SelectTrigger className="h-10 w-[150px]">
+              <SelectValue placeholder="Nicho" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Nichos</SelectItem>
+              {nichosList.map((niche) => (
+                <SelectItem key={niche} value={niche}>{niche}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={countryFilter} onValueChange={setCountryFilter}>
+            <SelectTrigger className="h-10 w-[150px]">
+              <SelectValue placeholder="País" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos Países</SelectItem>
+              {paisesList.map((country) => (
+                <SelectItem key={country} value={country}>{country}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={healthFilter} onValueChange={setHealthFilter}>
+            <SelectTrigger className="h-10 w-[150px]">
+              <SelectValue placeholder="Saúde" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Saúdes</SelectItem>
+              <SelectItem value="success">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-success" />
+                  Verde
+                </div>
+              </SelectItem>
+              <SelectItem value="warning">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-warning" />
+                  Amarelo
+                </div>
+              </SelectItem>
+              <SelectItem value="danger">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-danger" />
+                  Vermelho
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Loading State */}

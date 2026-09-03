@@ -89,15 +89,15 @@ export function KPIDualCard({
   className,
 }: KPIDualCardProps) {
   return (
-    <Card className={cn('p-4 shadow-card', className)}>
-      <div className="flex flex-col sm:flex-row sm:items-stretch gap-3 sm:gap-0">
+    <Card className={cn('overflow-hidden p-0 shadow-card', className)}>
+      <div className="grid grid-cols-2 items-stretch">
         {/* Left section */}
-        <div className="flex-1 space-y-0.5 min-w-0">
-          <p className="text-[11px] font-medium text-muted-foreground leading-tight">
+        <div className="min-w-0 space-y-1 p-3.5 sm:p-4">
+          <p className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[11px]">
             {leftLabel}
           </p>
           <p
-            className={cn('text-base font-bold tracking-tight', {
+            className={cn('whitespace-nowrap text-[15px] font-bold tabular-nums tracking-tight sm:text-base', {
               'text-success': leftVariant === 'success',
               'text-warning': leftVariant === 'warning',
               'text-danger': leftVariant === 'danger',
@@ -107,17 +107,13 @@ export function KPIDualCard({
           </p>
         </div>
 
-        {/* Divider */}
-        <div className="hidden sm:block w-px bg-border mx-2" />
-        <div className="sm:hidden h-px bg-border w-full" />
-
         {/* Right section */}
-        <div className="flex-1 space-y-0.5 min-w-0">
-          <p className="text-[11px] font-medium text-muted-foreground leading-tight">
+        <div className="min-w-0 space-y-1 border-l border-border p-3.5 sm:p-4">
+          <p className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground sm:text-[11px]">
             {rightLabel}
           </p>
           <p
-            className={cn('text-base font-bold tracking-tight', {
+            className={cn('whitespace-nowrap text-[15px] font-bold tabular-nums tracking-tight sm:text-base', {
               'text-success': rightVariant === 'success',
               'text-warning': rightVariant === 'warning',
               'text-danger': rightVariant === 'danger',

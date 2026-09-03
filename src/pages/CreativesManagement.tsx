@@ -54,6 +54,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MetricBadge } from '@/components/MetricBadge';
+import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { VideoThumbnail } from '@/components/VideoPlayerDialog';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
@@ -601,19 +602,105 @@ export default function CreativesManagement() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
+      <Card className="p-3 md:p-4">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white dark:bg-zinc-950 border-border"
+              className="h-11 bg-white pl-9 dark:bg-zinc-950"
+            />
+          </div>
+          <MobileFiltersSheet
+            activeCount={
+              Number(offerFilter !== 'all') +
+              Number(sourceFilter !== 'all') +
+              Number(statusFilter !== 'all') +
+              Number(copywriterFilter !== 'all') +
+              Number(periodo.tipo !== '7d') +
+              Number(sortField !== null)
+            }
+            onClear={() => {
+              setOfferFilter('all');
+              setSourceFilter('all');
+              setStatusFilter('all');
+              setCopywriterFilter('all');
+              setSortField(null);
+              setSortDirection('desc');
+              setPeriodo({ ...periodo, tipo: '7d' });
+            }}
+          >
+            <Select value={offerFilter} onValueChange={setOfferFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Oferta" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Ofertas</SelectItem>
+                {(ofertas || []).map((offer) => <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Fonte" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Fontes</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
+                <SelectItem value="youtube">YouTube</SelectItem>
+                <SelectItem value="tiktok">TikTok</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                <SelectItem value="liberado">Liberado</SelectItem>
+                <SelectItem value="em_teste">Em Teste</SelectItem>
+                <SelectItem value="nao_validado">Não Validado</SelectItem>
+                <SelectItem value="pausado">Pausado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={copywriterFilter} onValueChange={setCopywriterFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Copywriter" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Copys</SelectItem>
+                {(copywriters || []).map((copy) => <SelectItem key={copy.id} value={copy.nome}>{copy.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select
+              value={sortField ? `date-${sortDirection}` : 'default'}
+              onValueChange={(value) => {
+                if (value === 'default') {
+                  setSortField(null);
+                  setSortDirection('desc');
+                  return;
+                }
+                setSortField('date');
+                setSortDirection(value === 'date-asc' ? 'asc' : 'desc');
+              }}
+            >
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Ordenar" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Ordem padrão</SelectItem>
+                <SelectItem value="date-desc">Mais recentes</SelectItem>
+                <SelectItem value="date-asc">Mais antigos</SelectItem>
+              </SelectContent>
+            </Select>
+            <PeriodoFilter value={periodo} onChange={setPeriodo} showAllOption className="w-full" />
+          </MobileFiltersSheet>
+        </div>
+
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white pl-9 dark:bg-zinc-950"
             />
           </div>
           <Select value={offerFilter} onValueChange={setOfferFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Oferta" />
             </SelectTrigger>
             <SelectContent>
@@ -624,7 +711,7 @@ export default function CreativesManagement() {
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Fonte" />
             </SelectTrigger>
             <SelectContent>
@@ -636,7 +723,7 @@ export default function CreativesManagement() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -648,7 +735,7 @@ export default function CreativesManagement() {
             </SelectContent>
           </Select>
           <Select value={copywriterFilter} onValueChange={setCopywriterFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Copywriter" />
             </SelectTrigger>
             <SelectContent>
@@ -662,7 +749,7 @@ export default function CreativesManagement() {
             value={periodo}
             onChange={setPeriodo}
             showAllOption
-            className="w-full sm:w-auto"
+            className="w-auto"
           />
         </div>
       </Card>
@@ -736,7 +823,7 @@ export default function CreativesManagement() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Esses criativos foram criados mas ainda não têm métricas lançadas. Clique para editar ou lance métricas para vê-los na tabela.
+                Esses criativos foram criados mas ainda não têm métricas lançadas. Clique para editar ou lance métricas para vê-los na lista.
               </p>
             </div>
           </div>
@@ -749,8 +836,102 @@ export default function CreativesManagement() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        /* Table - now shows one row per criativo + day */
-        <Card className="overflow-hidden p-0">
+        <>
+          {/* Mobile cards */}
+          <div className="grid gap-3 md:hidden">
+            {sortedMetricas.length === 0 ? (
+              <Card className="p-6 text-center text-sm text-muted-foreground">
+                Nenhuma métrica encontrada para o período selecionado.
+              </Card>
+            ) : (
+              sortedMetricas.map((metrica) => {
+                if (!metrica.criativo) return null;
+                const thresholds = getOfferThresholds(metrica.criativo.oferta_id);
+
+                return (
+                  <Card key={metrica.id} className="overflow-hidden p-0 shadow-sm">
+                    <div className="flex items-start gap-3 p-4">
+                      <VideoThumbnail url={metrica.criativo.url} creativeId={metrica.criativo.id_unico} />
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          className="max-w-full truncate text-left font-mono text-sm font-semibold hover:text-primary"
+                          onClick={() => copyToClipboard(metrica.criativo!.id_unico)}
+                        >
+                          {metrica.criativo.id_unico}
+                        </button>
+                        <p className="mt-1 truncate text-sm text-muted-foreground">
+                          {metrica.criativo.oferta?.nome || 'Sem oferta'}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <FonteBadge fonte={metrica.criativo.fonte} />
+                          <CreativeStatusBadge status={metrica.criativo.status || 'nao_validado'} />
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-[11px] text-muted-foreground">{formatDate(metrica.data)}</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 border-y bg-muted/25">
+                      <div className="flex flex-col items-center gap-1.5 px-2 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">ROAS</span>
+                        <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} />
+                      </div>
+                      <div className="flex flex-col items-center gap-1.5 border-x px-2 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">IC</span>
+                        <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} />
+                      </div>
+                      <div className="flex flex-col items-center gap-1.5 px-2 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">CPC</span>
+                        <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} />
+                      </div>
+                    </div>
+
+                    <details className="group border-b px-4 py-3">
+                      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
+                        <span className="flex items-center gap-2"><BarChart2 className="h-4 w-4 text-muted-foreground" /> Mais métricas</span>
+                        <span className="text-xs text-muted-foreground group-open:hidden">Ver</span>
+                        <span className="hidden text-xs text-muted-foreground group-open:inline">Ocultar</span>
+                      </summary>
+                      <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-2 text-sm">
+                        <span className="text-muted-foreground">Spend</span>
+                        <span className="text-right font-medium">{formatCurrency(metrica.spend || 0)}</span>
+                        <span className="text-muted-foreground">Conversões</span>
+                        <span className="text-right font-medium">{(metrica.conversoes || 0).toLocaleString('pt-BR')}</span>
+                        <span className="text-muted-foreground">Cliques</span>
+                        <span className="text-right font-medium">{(metrica.cliques || 0).toLocaleString('pt-BR')}</span>
+                        <span className="text-muted-foreground">Impressões</span>
+                        <span className="text-right font-medium">{(metrica.impressoes || 0).toLocaleString('pt-BR')}</span>
+                        <span className="text-muted-foreground">CTR</span>
+                        <span className="text-right font-medium">{((metrica.ctr || 0) * 100).toFixed(2)}%</span>
+                        <span className="text-muted-foreground">CPM</span>
+                        <span className="text-right font-medium">{formatCurrency(metrica.cpm || 0)}</span>
+                        <span className="text-muted-foreground">Copywriter</span>
+                        <span className="truncate text-right font-medium">{metrica.criativo.copy_responsavel || '-'}</span>
+                      </div>
+                    </details>
+
+                    <div className="grid grid-cols-2 gap-2 p-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="gap-2"
+                        disabled={!metrica.criativo.oferta_id}
+                        onClick={() => metrica.criativo?.oferta_id && navigate(`/ofertas/${metrica.criativo.oferta_id}`)}
+                      >
+                        <Eye className="h-4 w-4" /> Abrir oferta
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-2" onClick={() => openEditDialog(metrica.criativo!.id)}>
+                        <Pencil className="h-4 w-4" /> Editar
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden overflow-hidden p-0 md:block">
           <Table className="min-w-[860px]">
             <TableHeader>
               <TableRow>
@@ -903,7 +1084,8 @@ export default function CreativesManagement() {
               )}
             </TableBody>
           </Table>
-        </Card>
+          </Card>
+        </>
       )}
 
       {/* Edit Dialog */}

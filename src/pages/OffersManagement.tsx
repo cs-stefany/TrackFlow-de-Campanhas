@@ -52,6 +52,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { StatusBadge, MetricBadge } from '@/components/MetricBadge';
+import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
 import { ThresholdsDialog } from '@/components/ThresholdsDialog';
@@ -669,19 +670,105 @@ export default function OffersManagement() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-          <div className="relative min-w-0 flex-1 sm:min-w-[200px]">
+      <Card className="p-3 md:p-4">
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white dark:bg-zinc-950 border-border"
+              className="h-11 bg-white pl-9 dark:bg-zinc-950"
+            />
+          </div>
+          <MobileFiltersSheet
+            activeCount={
+              Number(nicheFilter !== 'all') +
+              Number(countryFilter !== 'all') +
+              Number(statusFilter !== 'all') +
+              Number(healthFilter !== 'all') +
+              Number(periodo.tipo !== '7d') +
+              Number(sortField !== null)
+            }
+            onClear={() => {
+              setNicheFilter('all');
+              setCountryFilter('all');
+              setStatusFilter('all');
+              setHealthFilter('all');
+              setSortField(null);
+              setSortDirection('desc');
+              setPeriodo({ ...periodo, tipo: '7d' });
+            }}
+          >
+            <Select value={nicheFilter} onValueChange={setNicheFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Nicho" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Nichos</SelectItem>
+                {(nichos || []).map((niche) => <SelectItem key={niche.id} value={niche.nome}>{niche.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={countryFilter} onValueChange={setCountryFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="País" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Países</SelectItem>
+                {(paises || []).map((pais) => <SelectItem key={pais.id} value={pais.nome}>{pais.nome}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos Status</SelectItem>
+                <SelectItem value="ativo">Ativo</SelectItem>
+                <SelectItem value="pausado">Pausado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={healthFilter} onValueChange={setHealthFilter}>
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Saúde" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Saúdes</SelectItem>
+                <SelectItem value="success">Verde</SelectItem>
+                <SelectItem value="warning">Amarelo</SelectItem>
+                <SelectItem value="danger">Vermelho</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={sortField ? `${sortField}-${sortDirection}` : 'default'}
+              onValueChange={(value) => {
+                if (value === 'default') {
+                  setSortField(null);
+                  setSortDirection('desc');
+                  return;
+                }
+                const [field, direction] = value.split('-') as [Exclude<SortField, null>, SortDirection];
+                setSortField(field);
+                setSortDirection(direction);
+              }}
+            >
+              <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Ordenar" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Ordem padrão</SelectItem>
+                <SelectItem value="date-desc">Mais recentes</SelectItem>
+                <SelectItem value="roas-desc">Maior ROAS</SelectItem>
+                <SelectItem value="ic-asc">Menor IC</SelectItem>
+                <SelectItem value="cpc-asc">Menor CPC</SelectItem>
+              </SelectContent>
+            </Select>
+            <PeriodoFilter value={periodo} onChange={setPeriodo} showAllOption className="w-full" />
+          </MobileFiltersSheet>
+        </div>
+
+        <div className="hidden flex-wrap items-center gap-3 md:flex">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-white pl-9 dark:bg-zinc-950"
             />
           </div>
           <Select value={nicheFilter} onValueChange={setNicheFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Nicho" />
             </SelectTrigger>
             <SelectContent>
@@ -692,7 +779,7 @@ export default function OffersManagement() {
             </SelectContent>
           </Select>
           <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="País" />
             </SelectTrigger>
             <SelectContent>
@@ -703,7 +790,7 @@ export default function OffersManagement() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -713,7 +800,7 @@ export default function OffersManagement() {
             </SelectContent>
           </Select>
           <Select value={healthFilter} onValueChange={setHealthFilter}>
-            <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[140px]">
+            <SelectTrigger className="h-10 w-[140px]">
               <SelectValue placeholder="Saúde" />
             </SelectTrigger>
             <SelectContent>
@@ -742,7 +829,7 @@ export default function OffersManagement() {
             value={periodo} 
             onChange={setPeriodo}
             showAllOption
-            className="w-full sm:w-auto"
+            className="w-auto"
           />
         </div>
       </Card>
@@ -805,7 +892,7 @@ export default function OffersManagement() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Essas ofertas foram criadas mas ainda não têm métricas lançadas. Clique para editar ou lance métricas para vê-las na tabela.
+                Essas ofertas foram criadas mas ainda não têm métricas lançadas. Clique para editar ou lance métricas para vê-las na lista.
               </p>
             </div>
           </div>
@@ -818,8 +905,90 @@ export default function OffersManagement() {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        /* Table */
-        <Card className="overflow-hidden p-0">
+        <>
+          {/* Mobile cards */}
+          <div className="grid gap-3 md:hidden">
+            {sortedMetricas.length === 0 ? (
+              <Card className="p-6 text-center text-sm text-muted-foreground">
+                Nenhum resultado encontrado para o período selecionado.
+              </Card>
+            ) : (
+              sortedMetricas.map((metrica) => {
+                if (!metrica.oferta) return null;
+
+                const thresholds = getOfferThresholds(metrica.oferta_id);
+                const lucro = (metrica.faturado || 0) - (metrica.spend || 0);
+                const mc = metrica.faturado && metrica.faturado > 0
+                  ? (lucro / metrica.faturado) * 100
+                  : 0;
+
+                return (
+                  <Card key={metrica.id} className="overflow-hidden p-0 shadow-sm">
+                    <div className="flex items-start justify-between gap-3 p-4">
+                      <div className="min-w-0">
+                        <h2 className="truncate font-semibold text-foreground">{metrica.oferta.nome}</h2>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {metrica.oferta.nicho} · {metrica.oferta.pais}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <StatusBadge status={mapStatusToDisplay(metrica.oferta.status || 'ativo')} />
+                        <span className="text-[11px] text-muted-foreground">{formatDate(metrica.data)}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 border-y bg-muted/25">
+                      <div className="flex flex-col items-center gap-1.5 px-2 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">ROAS</span>
+                        <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} />
+                      </div>
+                      <div className="flex flex-col items-center gap-1.5 border-x px-2 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">IC</span>
+                        <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} />
+                      </div>
+                      <div className="flex flex-col items-center gap-1.5 px-2 py-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">CPC</span>
+                        <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} />
+                      </div>
+                    </div>
+
+                    <details className="group border-b px-4 py-3">
+                      <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
+                        <span className="flex items-center gap-2"><BarChart2 className="h-4 w-4 text-muted-foreground" /> Financeiro</span>
+                        <span className="text-xs text-muted-foreground group-open:hidden">Ver</span>
+                        <span className="hidden text-xs text-muted-foreground group-open:inline">Ocultar</span>
+                      </summary>
+                      <div className="mt-3 grid grid-cols-2 gap-x-5 gap-y-2 text-sm">
+                        <span className="text-muted-foreground">Spend</span>
+                        <span className="text-right font-medium">{formatCurrency(metrica.spend || 0)}</span>
+                        <span className="text-muted-foreground">Faturamento</span>
+                        <span className="text-right font-medium">{formatCurrency(metrica.faturado || 0)}</span>
+                        <span className="text-muted-foreground">Lucro</span>
+                        <span className={cn('text-right font-medium', lucro >= 0 ? 'text-success' : 'text-danger')}>{formatCurrency(lucro)}</span>
+                        <span className="text-muted-foreground">Margem</span>
+                        <span className="text-right font-medium">{mc.toFixed(1)}%</span>
+                      </div>
+                    </details>
+
+                    <div className="grid grid-cols-3 gap-2 p-3">
+                      <Button variant="secondary" size="sm" className="gap-1.5 px-2" onClick={() => navigate(`/ofertas/${metrica.oferta!.id}`)}>
+                        <Eye className="h-4 w-4" /> Abrir
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5 px-2" onClick={() => openThresholdsDialog(metrica)}>
+                        <BarChart2 className="h-4 w-4" /> Metas
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5 px-2" onClick={() => openEditSheet(metrica.oferta!)}>
+                        <Pencil className="h-4 w-4" /> Editar
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <Card className="hidden overflow-hidden p-0 md:block">
           <Table className="min-w-[880px]">
             <TableHeader>
               <TableRow>
@@ -963,7 +1132,8 @@ export default function OffersManagement() {
               )}
             </TableBody>
           </Table>
-        </Card>
+          </Card>
+        </>
       )}
 
       {/* Thresholds Dialog */}
