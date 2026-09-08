@@ -79,7 +79,7 @@ export default function OfferDetails() {
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const { periodo, setPeriodo } = usePeriodo('7d');
+  const { periodo, setPeriodo } = usePeriodo('7d', 'trackflow:detalhes:periodo');
   const [copyFilter, setCopyFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState<SortField>(null);

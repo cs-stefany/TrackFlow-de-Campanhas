@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Pencil, Search, ArrowUpDown, Eye, RefreshCw, Loader2, BarChart2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, Pencil, Search, ArrowUpDown, Eye, RefreshCw, Loader2, BarChart2, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -53,6 +53,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { StatusBadge, MetricBadge } from '@/components/MetricBadge';
 import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
+import { ListPagination } from '@/components/ListPagination';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
 import { ThresholdsDialog } from '@/components/ThresholdsDialog';
@@ -62,7 +63,6 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   useOfertas,
-  useOfertasAtivas,
   useCreateOferta,
   useUpdateOferta,
   useArchiveOferta,
@@ -84,7 +84,7 @@ type MetricaDiaComOferta = MetricaDiariaOfertaComJoin;
 
 export default function OffersManagement() {
   const navigate = useNavigate();
-  const { periodo, setPeriodo } = usePeriodo('7d');
+  const { periodo, setPeriodo } = usePeriodo('7d', 'trackflow:ofertas:periodo');
   
   // Supabase hooks - agora busca métricas diárias com JOIN na oferta
   const { data: metricasDiarias, isLoading: isLoadingMetricas, refetch: refetchMetricas } = useMetricasDiariasComOferta({
@@ -92,7 +92,6 @@ export default function OffersManagement() {
     dataFim: periodo.dataFim,
   });
   const { data: ofertas, isLoading: isLoadingOfertas, refetch: refetchOfertas } = useOfertas();
-  const { data: ofertasAtivas } = useOfertasAtivas();
   const { data: nichos, isLoading: isLoadingNichos } = useNichos();
   const { data: paises, isLoading: isLoadingPaises } = usePaises();
 
@@ -131,6 +130,9 @@ export default function OffersManagement() {
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+  const isLoadingList = isLoadingMetricas || isLoadingOfertas;
   
   // New offer form state
   const [newOfferName, setNewOfferName] = useState('');
@@ -190,8 +192,48 @@ export default function OffersManagement() {
     return convertThresholdsFormat(historicalThresholds);
   };
 
-  // Filter metrics based on search and filters
-  const filteredMetricas = (metricasDiarias || []).filter((metrica) => {
+  const metricasPorOferta = useMemo(() => {
+    const grouped = new Map<string, MetricaDiaComOferta[]>();
+    (metricasDiarias || []).forEach((metrica) => {
+      if (!metrica.oferta_id) return;
+      const current = grouped.get(metrica.oferta_id) || [];
+      current.push(metrica);
+      grouped.set(metrica.oferta_id, current);
+    });
+    grouped.forEach((items) => items.sort((a, b) => b.data.localeCompare(a.data)));
+    return grouped;
+  }, [metricasDiarias]);
+
+  const metricasAgregadas = useMemo(() => {
+    return (ofertas || [])
+      .filter((oferta) => oferta.status !== 'arquivado')
+      .map((oferta) => {
+        const historico = metricasPorOferta.get(oferta.id) || [];
+        const latest = historico[0];
+        const spend = historico.reduce((sum, metrica) => sum + (metrica.spend || 0), 0);
+        const faturado = historico.reduce((sum, metrica) => sum + (metrica.faturado || 0), 0);
+        const conversoes = historico.reduce((sum, metrica) => sum + (metrica.conversoes || 0), 0);
+        const cliques = historico.reduce((sum, metrica) => sum + (metrica.cliques || 0), 0);
+
+        return {
+          ...(latest || {}),
+          id: `resumo-${oferta.id}`,
+          oferta_id: oferta.id,
+          oferta,
+          data: latest?.data || oferta.data,
+          spend,
+          faturado,
+          conversoes,
+          cliques,
+          roas: spend > 0 ? faturado / spend : 0,
+          ic: conversoes > 0 ? spend / conversoes : 0,
+          cpc: cliques > 0 ? spend / cliques : 0,
+        } as MetricaDiaComOferta;
+      });
+  }, [metricasPorOferta, ofertas]);
+
+  // Filtra uma linha por oferta com as métricas somadas no período.
+  const filteredMetricas = metricasAgregadas.filter((metrica) => {
     if (!metrica.oferta) return false;
 
     const matchesSearch = metrica.oferta.nome.toLowerCase().includes(searchQuery.toLowerCase());
@@ -200,9 +242,10 @@ export default function OffersManagement() {
     const matchesStatus = statusFilter === 'all' || metrica.oferta.status === statusFilter;
 
     // For health filter, use historical thresholds
+    const hasMetrics = (metricasPorOferta.get(metrica.oferta_id) || []).length > 0;
     const thresholds = getOfferThresholds(metrica.oferta_id);
     const health = getMetricStatus(metrica.roas || 0, 'roas', thresholds);
-    const matchesHealth = healthFilter === 'all' || health === healthFilter;
+    const matchesHealth = healthFilter === 'all' || (hasMetrics && health === healthFilter);
 
     return matchesSearch && matchesNiche && matchesCountry && matchesStatus && matchesHealth;
   });
@@ -236,6 +279,14 @@ export default function OffersManagement() {
     
     return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, nicheFilter, countryFilter, statusFilter, healthFilter, sortField, sortDirection, periodo]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedMetricas.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedMetricas = sortedMetricas.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const resetNewOfferForm = () => {
     setNewOfferName('');
@@ -413,22 +464,6 @@ export default function OffersManagement() {
     }
   };
 
-  // Encontrar ofertas ativas que não têm métricas no período selecionado
-  const ofertasComMetricas = new Set(
-    (metricasDiarias || [])
-      .filter(m => m.oferta)
-      .map(m => m.oferta!.id)
-  );
-
-  const ofertasSemMetricas = (ofertasAtivas || []).filter(oferta => {
-    const semMetricas = !ofertasComMetricas.has(oferta.id);
-    const matchesSearch = oferta.nome.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesNiche = nicheFilter === 'all' || oferta.nicho === nicheFilter;
-    const matchesCountry = countryFilter === 'all' || oferta.pais === countryFilter;
-    const matchesStatus = statusFilter === 'all' || oferta.status === statusFilter;
-    return semMetricas && matchesSearch && matchesNiche && matchesCountry && matchesStatus;
-  });
-
   return (
     <div className="space-y-5 sm:space-y-6">
       {/* Header */}
@@ -445,9 +480,9 @@ export default function OffersManagement() {
             size="sm" 
             className="h-11 gap-2 sm:h-9"
             onClick={handleRefresh}
-            disabled={isLoadingMetricas}
+            disabled={isLoadingList}
           >
-            {isLoadingMetricas ? (
+            {isLoadingList ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
@@ -834,73 +869,20 @@ export default function OffersManagement() {
         </div>
       </Card>
 
-      {/* Ofertas sem métricas no período */}
-      {ofertasSemMetricas.length > 0 && (
-        <Card className="p-4 border-warning/50 bg-warning/5">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <div className="h-2 w-2 rounded-full bg-warning" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium text-foreground mb-2">
-                {ofertasSemMetricas.length} oferta(s) sem métricas no período selecionado
-              </h3>
-              <div className="grid gap-2 sm:flex sm:flex-wrap">
-                {ofertasSemMetricas.map((oferta) => (
-                  <div
-                    key={oferta.id}
-                    className="flex w-full min-w-0 items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:border-primary/50 sm:w-auto"
-                    onClick={() => openEditSheet(oferta)}
-                  >
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium sm:flex-none">{oferta.nome}</span>
-                    <StatusBadge status={mapStatusToDisplay(oferta.status || 'ativo')} />
-                    <TooltipProvider delayDuration={100}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/ofertas/${oferta.id}`);
-                            }}
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Ver detalhes e lançar métricas</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditSheet(oferta);
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Editar oferta</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Essas ofertas foram criadas mas ainda não têm métricas lançadas. Clique para editar ou lance métricas para vê-las na lista.
-              </p>
-            </div>
+      {!isLoadingList && (metricasDiarias || []).length === 0 && periodo.tipo !== 'all' && (
+        <Card className="flex flex-col gap-3 border-info/30 bg-info/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Nenhuma métrica neste período.</p>
+            <p className="mt-1 text-xs text-muted-foreground">As ofertas continuam disponíveis abaixo.</p>
           </div>
+          <Button variant="outline" size="sm" className="h-10" onClick={() => setPeriodo({ ...periodo, tipo: 'all' })}>
+            Ver histórico completo
+          </Button>
         </Card>
       )}
 
       {/* Loading State */}
-      {isLoadingMetricas ? (
+      {isLoadingList ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -910,13 +892,15 @@ export default function OffersManagement() {
           <div className="grid gap-3 md:hidden">
             {sortedMetricas.length === 0 ? (
               <Card className="p-6 text-center text-sm text-muted-foreground">
-                Nenhum resultado encontrado para o período selecionado.
+                Nenhuma oferta corresponde aos filtros selecionados.
               </Card>
             ) : (
-              sortedMetricas.map((metrica) => {
+              paginatedMetricas.map((metrica) => {
                 if (!metrica.oferta) return null;
 
                 const thresholds = getOfferThresholds(metrica.oferta_id);
+                const historico = metricasPorOferta.get(metrica.oferta.id) || [];
+                const hasMetrics = historico.length > 0;
                 const lucro = (metrica.faturado || 0) - (metrica.spend || 0);
                 const mc = metrica.faturado && metrica.faturado > 0
                   ? (lucro / metrica.faturado) * 100
@@ -933,26 +917,28 @@ export default function OffersManagement() {
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
                         <StatusBadge status={mapStatusToDisplay(metrica.oferta.status || 'ativo')} />
-                        <span className="text-[11px] text-muted-foreground">{formatDate(metrica.data)}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {hasMetrics ? `Atualizado em ${formatDate(metrica.data)}` : 'Sem dados no período'}
+                        </span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 border-y bg-muted/25">
                       <div className="flex flex-col items-center gap-1.5 px-2 py-3">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">ROAS</span>
-                        <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} />
+                        {hasMetrics ? <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} /> : <span className="text-sm text-muted-foreground">—</span>}
                       </div>
                       <div className="flex flex-col items-center gap-1.5 border-x px-2 py-3">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">IC</span>
-                        <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} />
+                        {hasMetrics ? <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} /> : <span className="text-sm text-muted-foreground">—</span>}
                       </div>
                       <div className="flex flex-col items-center gap-1.5 px-2 py-3">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">CPC</span>
-                        <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} />
+                        {hasMetrics ? <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} /> : <span className="text-sm text-muted-foreground">—</span>}
                       </div>
                     </div>
 
-                    <details className="group border-b px-4 py-3">
+                    {hasMetrics && <details className="group border-b px-4 py-3">
                       <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
                         <span className="flex items-center gap-2"><BarChart2 className="h-4 w-4 text-muted-foreground" /> Financeiro</span>
                         <span className="text-xs text-muted-foreground group-open:hidden">Ver</span>
@@ -968,7 +954,27 @@ export default function OffersManagement() {
                         <span className="text-muted-foreground">Margem</span>
                         <span className="text-right font-medium">{mc.toFixed(1)}%</span>
                       </div>
-                    </details>
+                    </details>}
+
+                    {hasMetrics && (
+                      <details className="group border-b px-4 py-3">
+                        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
+                          <span className="flex items-center gap-2"><History className="h-4 w-4 text-muted-foreground" /> Histórico diário ({historico.length})</span>
+                          <span className="text-xs text-muted-foreground group-open:hidden">Ver</span>
+                          <span className="hidden text-xs text-muted-foreground group-open:inline">Ocultar</span>
+                        </summary>
+                        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                          {historico.map((dia) => (
+                            <div key={dia.id} className="grid grid-cols-4 items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                              <span className="font-medium">{formatDate(dia.data)}</span>
+                              <span className="text-center">ROAS {formatRoas(dia.roas || 0)}</span>
+                              <span className="text-center">IC {formatCurrency(dia.ic || 0)}</span>
+                              <span className="text-right">CPC {formatCurrency(dia.cpc || 0)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
 
                     <div className="grid grid-cols-3 gap-2 p-3">
                       <Button variant="secondary" size="sm" className="gap-1.5 px-2" onClick={() => navigate(`/ofertas/${metrica.oferta!.id}`)}>
@@ -988,11 +994,11 @@ export default function OffersManagement() {
           </div>
 
           {/* Desktop table */}
-          <Card className="hidden overflow-hidden p-0 md:block">
-          <Table className="min-w-[880px]">
-            <TableHeader>
+          <Card className="hidden max-h-[70vh] overflow-auto p-0 md:block">
+          <Table noOverflow className="min-w-[920px]">
+            <TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
               <TableRow>
-                <SortableHeader field="date" className="text-center">Data</SortableHeader>
+                <SortableHeader field="date" className="text-center">Última métrica</SortableHeader>
                 <TableHead className="text-center">Nome</TableHead>
                 <TableHead className="text-center">Nicho</TableHead>
                 <TableHead className="text-center">País</TableHead>
@@ -1011,10 +1017,12 @@ export default function OffersManagement() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedMetricas.map((metrica) => {
+                paginatedMetricas.map((metrica) => {
                   if (!metrica.oferta) return null;
 
                   const thresholds = getOfferThresholds(metrica.oferta_id);
+                  const historico = metricasPorOferta.get(metrica.oferta.id) || [];
+                  const hasMetrics = historico.length > 0;
                   const lucro = (metrica.faturado || 0) - (metrica.spend || 0);
                   const mc = metrica.faturado && metrica.faturado > 0
                     ? (lucro / metrica.faturado) * 100
@@ -1022,46 +1030,75 @@ export default function OffersManagement() {
 
                   return (
                     <TableRow key={metrica.id}>
-                      <TableCell className="text-center">{formatDate(metrica.data)}</TableCell>
-                      <TableCell className="text-center font-medium">{metrica.oferta.nome}</TableCell>
+                      <TableCell className="text-center">{hasMetrics ? formatDate(metrica.data) : 'Sem dados'}</TableCell>
+                      <TableCell className="text-center font-medium">
+                        <button className="hover:text-primary hover:underline" onClick={() => navigate(`/ofertas/${metrica.oferta!.id}`)}>{metrica.oferta.nome}</button>
+                      </TableCell>
                       <TableCell className="text-center">{metrica.oferta.nicho}</TableCell>
                       <TableCell className="text-center">{metrica.oferta.pais}</TableCell>
                       <TableCell className="text-center"><StatusBadge status={mapStatusToDisplay(metrica.oferta.status || 'ativo')} /></TableCell>
                       <TableCell className="text-center">
-                        <MetricBadge
+                        {hasMetrics ? <MetricBadge
                           value={metrica.roas || 0}
                           metricType="roas"
                           thresholds={thresholds}
                           format={formatRoas}
-                        />
+                        /> : '—'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <MetricBadge
+                        {hasMetrics ? <MetricBadge
                           value={metrica.ic || 0}
                           metricType="ic"
                           thresholds={thresholds}
                           format={(v) => formatCurrency(v)}
-                        />
+                        /> : '—'}
                       </TableCell>
                       <TableCell className="text-center">
-                        <MetricBadge
+                        {hasMetrics ? <MetricBadge
                           value={metrica.cpc || 0}
                           metricType="cpc"
                           thresholds={thresholds}
                           format={(v) => formatCurrency(v)}
-                        />
+                        /> : '—'}
                       </TableCell>
                       <TableCell className="text-center">
                         <TooltipProvider delayDuration={100}>
                           <div className="flex items-center justify-center gap-1">
-                            <Popover>
+                            {hasMetrics && (
+                              <Popover>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Ver histórico diário">
+                                        <History className="h-4 w-4" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Histórico diário</TooltipContent>
+                                </Tooltip>
+                                <PopoverContent className="w-80" align="end">
+                                  <p className="border-b pb-2 text-sm font-semibold">Histórico diário</p>
+                                  <div className="mt-2 max-h-72 space-y-2 overflow-y-auto pr-1">
+                                    {historico.map((dia) => (
+                                      <div key={dia.id} className="grid grid-cols-[1fr_auto] gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                                        <span className="font-medium">{formatDate(dia.data)}</span>
+                                        <span>ROAS {formatRoas(dia.roas || 0)}</span>
+                                        <span>{formatCurrency(dia.spend || 0)} investidos</span>
+                                        <span>{formatCurrency(dia.faturado || 0)} faturados</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+                            {hasMetrics && <Popover>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <PopoverTrigger asChild>
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8"
+                                      className="h-9 w-9"
                                     >
                                       <BarChart2 className="h-4 w-4" />
                                     </Button>
@@ -1096,13 +1133,13 @@ export default function OffersManagement() {
                                   </div>
                                 </div>
                               </PopoverContent>
-                            </Popover>
+                            </Popover>}
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8"
+                                  className="h-9 w-9"
                                   onClick={() => openThresholdsDialog(metrica)}
                                 >
                                   <Eye className="h-4 w-4" />
@@ -1115,7 +1152,7 @@ export default function OffersManagement() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8"
+                                  className="h-9 w-9"
                                   onClick={() => metrica.oferta && openEditSheet(metrica.oferta)}
                                 >
                                   <Pencil className="h-4 w-4" />
@@ -1133,6 +1170,7 @@ export default function OffersManagement() {
             </TableBody>
           </Table>
           </Card>
+          <ListPagination page={currentPage} pageSize={pageSize} totalItems={sortedMetricas.length} onPageChange={setPage} />
         </>
       )}
 

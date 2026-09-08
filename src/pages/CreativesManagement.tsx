@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Pencil, Search, ArrowUpDown, RefreshCw, Loader2, CalendarIcon, BarChart2, Eye } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus, Pencil, Search, ArrowUpDown, RefreshCw, Loader2, CalendarIcon, BarChart2, Eye, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,6 +55,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MetricBadge } from '@/components/MetricBadge';
 import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
+import { ListPagination } from '@/components/ListPagination';
 import { VideoThumbnail } from '@/components/VideoPlayerDialog';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
@@ -77,7 +78,7 @@ import {
 } from '@/hooks/useSupabase';
 import { parseThresholds, type Criativo, type CriativoUpdate } from '@/services/api';
 
-type SortField = 'date' | null;
+type SortField = 'date' | 'roas' | 'ic' | 'cpc' | null;
 type SortDirection = 'asc' | 'desc';
 
 // Status mapping
@@ -140,14 +141,14 @@ function FonteBadge({ fonte }: { fonte: string }) {
 export default function CreativesManagement() {
   const navigate = useNavigate();
   // UI State - moved up for use in hook
-  const { periodo, setPeriodo } = usePeriodo('7d');
+  const { periodo, setPeriodo } = usePeriodo('7d', 'trackflow:criativos:periodo');
 
   // Supabase hooks
   const { data: metricasDiarias, isLoading: isLoadingMetricas, refetch } = useMetricasDiariasComCriativo({
     dataInicio: periodo.dataInicio,
     dataFim: periodo.dataFim,
   });
-  const { data: criativos } = useCriativos(); // Keep for edit dialog
+  const { data: criativos, isLoading: isLoadingCriativos } = useCriativos(); // Keep for edit dialog
   const { data: ofertas, isLoading: isLoadingOfertas } = useOfertasAtivas();
   const { data: copywriters, isLoading: isLoadingCopywriters } = useCopywriters();
 
@@ -183,6 +184,9 @@ export default function CreativesManagement() {
   const [copywriterFilter, setCopywriterFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+  const isLoadingList = isLoadingMetricas || isLoadingCriativos;
 
   // New creative form state
   const [newOferta, setNewOferta] = useState('');
@@ -215,8 +219,62 @@ export default function CreativesManagement() {
     }
   };
 
-  // Filter metrics (each row is criativo + day)
-  const filteredMetricas = (metricasDiarias || []).filter((metrica) => {
+  const metricasPorCriativo = useMemo(() => {
+    const grouped = new Map<string, MetricaDiariaComCriativo[]>();
+    (metricasDiarias || []).forEach((metrica) => {
+      const criativoId = metrica.criativo?.id;
+      if (!criativoId) return;
+      const current = grouped.get(criativoId) || [];
+      current.push(metrica);
+      grouped.set(criativoId, current);
+    });
+    grouped.forEach((items) => items.sort((a, b) => b.data.localeCompare(a.data)));
+    return grouped;
+  }, [metricasDiarias]);
+
+  const metricasAgregadas = useMemo(() => {
+    return (criativos || [])
+      .filter((criativo) => criativo.status !== 'arquivado')
+      .map((criativo) => {
+        const historico = metricasPorCriativo.get(criativo.id) || [];
+        const latest = historico[0];
+        const spend = historico.reduce((sum, metrica) => sum + (metrica.spend || 0), 0);
+        const faturado = historico.reduce((sum, metrica) => sum + (metrica.faturado || 0), 0);
+        const conversoes = historico.reduce((sum, metrica) => sum + (metrica.conversoes || 0), 0);
+        const cliques = historico.reduce((sum, metrica) => sum + (metrica.cliques || 0), 0);
+        const impressoes = historico.reduce((sum, metrica) => sum + (metrica.impressoes || 0), 0);
+        const oferta = latest?.criativo?.oferta || ofertas?.find((item) => item.id === criativo.oferta_id);
+
+        return {
+          ...(latest || {}),
+          id: `resumo-${criativo.id}`,
+          data: latest?.data || criativo.created_at?.slice(0, 10) || periodo.dataFim,
+          spend,
+          faturado,
+          conversoes,
+          cliques,
+          impressoes,
+          roas: spend > 0 ? faturado / spend : 0,
+          ic: conversoes > 0 ? spend / conversoes : 0,
+          cpc: cliques > 0 ? spend / cliques : 0,
+          ctr: impressoes > 0 ? cliques / impressoes : 0,
+          cpm: impressoes > 0 ? (spend / impressoes) * 1000 : 0,
+          criativo: {
+            id: criativo.id,
+            id_unico: criativo.id_unico,
+            oferta_id: criativo.oferta_id,
+            fonte: criativo.fonte,
+            copy_responsavel: criativo.copy_responsavel,
+            status: criativo.status,
+            url: criativo.url,
+            oferta: oferta ? { id: oferta.id, nome: oferta.nome, thresholds: oferta.thresholds } : null,
+          },
+        } as MetricaDiariaComCriativo;
+      });
+  }, [criativos, metricasPorCriativo, ofertas, periodo.dataFim]);
+
+  // Filtra uma linha por criativo com as métricas somadas no período.
+  const filteredMetricas = metricasAgregadas.filter((metrica) => {
     if (!metrica.criativo) return false;
 
     const matchesSearch = metrica.criativo.id_unico.toLowerCase().includes(searchQuery.toLowerCase());
@@ -227,24 +285,6 @@ export default function CreativesManagement() {
     const notArchived = metrica.criativo.status !== 'arquivado';
 
     return matchesSearch && matchesOffer && matchesSource && matchesStatus && matchesCopywriter && notArchived;
-  });
-
-  // Encontrar criativos ativos que não têm métricas no período selecionado
-  const criativosComMetricas = new Set(
-    (metricasDiarias || [])
-      .filter(m => m.criativo)
-      .map(m => m.criativo!.id)
-  );
-
-  const criativosSemMetricas = (criativos || []).filter(criativo => {
-    const semMetricas = !criativosComMetricas.has(criativo.id);
-    const notArchived = criativo.status !== 'arquivado';
-    const matchesSearch = criativo.id_unico.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesOffer = offerFilter === 'all' || criativo.oferta_id === offerFilter;
-    const matchesSource = sourceFilter === 'all' || criativo.fonte === sourceFilter;
-    const matchesStatus = statusFilter === 'all' || criativo.status === statusFilter;
-    const matchesCopywriter = copywriterFilter === 'all' || criativo.copy_responsavel === copywriterFilter;
-    return semMetricas && notArchived && matchesSearch && matchesOffer && matchesSource && matchesStatus && matchesCopywriter;
   });
 
   // Sort metrics
@@ -258,12 +298,32 @@ export default function CreativesManagement() {
         aValue = new Date(a.data).getTime();
         bValue = new Date(b.data).getTime();
         break;
+      case 'roas':
+        aValue = a.roas || 0;
+        bValue = b.roas || 0;
+        break;
+      case 'ic':
+        aValue = a.ic || 0;
+        bValue = b.ic || 0;
+        break;
+      case 'cpc':
+        aValue = a.cpc || 0;
+        bValue = b.cpc || 0;
+        break;
       default:
         return 0;
     }
 
     return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, offerFilter, sourceFilter, statusFilter, copywriterFilter, sortField, sortDirection, periodo]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedMetricas.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedMetricas = sortedMetricas.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const getOfferName = (ofertaId: string | null) => {
     if (!ofertaId) return 'N/A';
@@ -456,9 +516,9 @@ export default function CreativesManagement() {
               await refetch();
               toast.success('Dados atualizados!');
             }}
-            disabled={isLoadingMetricas}
+            disabled={isLoadingList}
           >
-            {isLoadingMetricas ? (
+            {isLoadingList ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
@@ -667,15 +727,16 @@ export default function CreativesManagement() {
               </SelectContent>
             </Select>
             <Select
-              value={sortField ? `date-${sortDirection}` : 'default'}
+              value={sortField ? `${sortField}-${sortDirection}` : 'default'}
               onValueChange={(value) => {
                 if (value === 'default') {
                   setSortField(null);
                   setSortDirection('desc');
                   return;
                 }
-                setSortField('date');
-                setSortDirection(value === 'date-asc' ? 'asc' : 'desc');
+                const [field, direction] = value.split('-') as [Exclude<SortField, null>, SortDirection];
+                setSortField(field);
+                setSortDirection(direction);
               }}
             >
               <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Ordenar" /></SelectTrigger>
@@ -683,6 +744,9 @@ export default function CreativesManagement() {
                 <SelectItem value="default">Ordem padrão</SelectItem>
                 <SelectItem value="date-desc">Mais recentes</SelectItem>
                 <SelectItem value="date-asc">Mais antigos</SelectItem>
+                <SelectItem value="roas-desc">Maior ROAS</SelectItem>
+                <SelectItem value="ic-asc">Menor IC</SelectItem>
+                <SelectItem value="cpc-asc">Menor CPC</SelectItem>
               </SelectContent>
             </Select>
             <PeriodoFilter value={periodo} onChange={setPeriodo} showAllOption className="w-full" />
@@ -754,84 +818,20 @@ export default function CreativesManagement() {
         </div>
       </Card>
 
-      {/* Criativos sem métricas no período */}
-      {criativosSemMetricas.length > 0 && (
-        <Card className="p-4 border-warning/50 bg-warning/5">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 mt-0.5">
-              <div className="h-2 w-2 rounded-full bg-warning" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-medium text-foreground mb-2">
-                {criativosSemMetricas.length} criativo(s) sem métricas no período selecionado
-              </h3>
-              <div className="grid gap-2 sm:flex sm:flex-wrap">
-                {criativosSemMetricas.map((criativo) => (
-                  <div
-                    key={criativo.id}
-                    className="flex w-full min-w-0 items-center gap-2 rounded-md border bg-background px-3 py-2 transition-colors hover:border-primary/50 sm:w-auto"
-                    onClick={() => openEditDialog(criativo.id)}
-                  >
-                    <span
-                      className="min-w-0 flex-1 truncate font-mono text-xs transition-colors hover:text-primary hover:underline sm:flex-none"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(criativo.id_unico);
-                      }}
-                      title="Clique para copiar"
-                    >
-                      {criativo.id_unico}
-                    </span>
-                    <CreativeStatusBadge status={criativo.status || 'nao_validado'} />
-                    <TooltipProvider delayDuration={100}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (criativo.oferta_id) {
-                                navigate(`/ofertas/${criativo.oferta_id}`);
-                              }
-                            }}
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Ver oferta e lançar métricas</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditDialog(criativo.id);
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Editar criativo</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Esses criativos foram criados mas ainda não têm métricas lançadas. Clique para editar ou lance métricas para vê-los na lista.
-              </p>
-            </div>
+      {!isLoadingList && (metricasDiarias || []).length === 0 && periodo.tipo !== 'all' && (
+        <Card className="flex flex-col gap-3 border-info/30 bg-info/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium">Nenhuma métrica neste período.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Os criativos continuam disponíveis abaixo.</p>
           </div>
+          <Button variant="outline" size="sm" className="h-10" onClick={() => setPeriodo({ ...periodo, tipo: 'all' })}>
+            Ver histórico completo
+          </Button>
         </Card>
       )}
 
       {/* Loading State */}
-      {isLoadingMetricas ? (
+      {isLoadingList ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -841,12 +841,14 @@ export default function CreativesManagement() {
           <div className="grid gap-3 md:hidden">
             {sortedMetricas.length === 0 ? (
               <Card className="p-6 text-center text-sm text-muted-foreground">
-                Nenhuma métrica encontrada para o período selecionado.
+                Nenhum criativo corresponde aos filtros selecionados.
               </Card>
             ) : (
-              sortedMetricas.map((metrica) => {
+              paginatedMetricas.map((metrica) => {
                 if (!metrica.criativo) return null;
                 const thresholds = getOfferThresholds(metrica.criativo.oferta_id);
+                const historico = metricasPorCriativo.get(metrica.criativo.id) || [];
+                const hasMetrics = historico.length > 0;
 
                 return (
                   <Card key={metrica.id} className="overflow-hidden p-0 shadow-sm">
@@ -868,25 +870,27 @@ export default function CreativesManagement() {
                           <CreativeStatusBadge status={metrica.criativo.status || 'nao_validado'} />
                         </div>
                       </div>
-                      <span className="shrink-0 text-[11px] text-muted-foreground">{formatDate(metrica.data)}</span>
+                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                        {hasMetrics ? formatDate(metrica.data) : 'Sem dados'}
+                      </span>
                     </div>
 
                     <div className="grid grid-cols-3 border-y bg-muted/25">
                       <div className="flex flex-col items-center gap-1.5 px-2 py-3">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">ROAS</span>
-                        <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} />
+                        {hasMetrics ? <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} /> : <span className="text-sm text-muted-foreground">—</span>}
                       </div>
                       <div className="flex flex-col items-center gap-1.5 border-x px-2 py-3">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">IC</span>
-                        <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} />
+                        {hasMetrics ? <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} /> : <span className="text-sm text-muted-foreground">—</span>}
                       </div>
                       <div className="flex flex-col items-center gap-1.5 px-2 py-3">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">CPC</span>
-                        <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} />
+                        {hasMetrics ? <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} /> : <span className="text-sm text-muted-foreground">—</span>}
                       </div>
                     </div>
 
-                    <details className="group border-b px-4 py-3">
+                    {hasMetrics && <details className="group border-b px-4 py-3">
                       <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
                         <span className="flex items-center gap-2"><BarChart2 className="h-4 w-4 text-muted-foreground" /> Mais métricas</span>
                         <span className="text-xs text-muted-foreground group-open:hidden">Ver</span>
@@ -908,7 +912,27 @@ export default function CreativesManagement() {
                         <span className="text-muted-foreground">Copywriter</span>
                         <span className="truncate text-right font-medium">{metrica.criativo.copy_responsavel || '-'}</span>
                       </div>
-                    </details>
+                    </details>}
+
+                    {hasMetrics && (
+                      <details className="group border-b px-4 py-3">
+                        <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
+                          <span className="flex items-center gap-2"><History className="h-4 w-4 text-muted-foreground" /> Histórico diário ({historico.length})</span>
+                          <span className="text-xs text-muted-foreground group-open:hidden">Ver</span>
+                          <span className="hidden text-xs text-muted-foreground group-open:inline">Ocultar</span>
+                        </summary>
+                        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                          {historico.map((dia) => (
+                            <div key={dia.id} className="grid grid-cols-4 items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                              <span className="font-medium">{formatDate(dia.data)}</span>
+                              <span className="text-center">ROAS {formatRoas(dia.roas || 0)}</span>
+                              <span className="text-center">IC {formatCurrency(dia.ic || 0)}</span>
+                              <span className="text-right">CPC {formatCurrency(dia.cpc || 0)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2 p-3">
                       <Button
@@ -931,36 +955,41 @@ export default function CreativesManagement() {
           </div>
 
           {/* Desktop table */}
-          <Card className="hidden overflow-hidden p-0 md:block">
-          <Table className="min-w-[860px]">
-            <TableHeader>
+          <Card className="hidden max-h-[70vh] overflow-auto p-0 md:block">
+          <Table noOverflow className="min-w-[1120px]">
+            <TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_hsl(var(--border))]">
               <TableRow>
-                <SortableHeader field="date" className="text-center">Data</SortableHeader>
+                <SortableHeader field="date" className="text-center">Última métrica</SortableHeader>
                 <TableHead className="w-[60px] text-center">Thumb</TableHead>
                 <TableHead className="text-center">ID</TableHead>
                 <TableHead className="text-center">Oferta</TableHead>
                 <TableHead className="text-center">Fonte</TableHead>
                 <TableHead className="text-center">Copywriter</TableHead>
                 <TableHead className="text-center">Status</TableHead>
+                <SortableHeader field="roas" className="text-center">ROAS</SortableHeader>
+                <SortableHeader field="ic" className="text-center">IC</SortableHeader>
+                <SortableHeader field="cpc" className="text-center">CPC</SortableHeader>
                 <TableHead className="text-center">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedMetricas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    Nenhuma métrica encontrada para o período selecionado.
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                    Nenhum criativo corresponde aos filtros selecionados.
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedMetricas.map((metrica) => {
+                paginatedMetricas.map((metrica) => {
                   if (!metrica.criativo) return null;
                   const thresholds = getOfferThresholds(metrica.criativo.oferta_id);
+                  const historico = metricasPorCriativo.get(metrica.criativo.id) || [];
+                  const hasMetrics = historico.length > 0;
 
                   return (
                     <TableRow key={metrica.id}>
                       <TableCell className="text-center">
-                        {formatDate(metrica.data)}
+                        {hasMetrics ? formatDate(metrica.data) : 'Sem dados'}
                       </TableCell>
                       <TableCell className="text-center">
                         <VideoThumbnail url={metrica.criativo.url} creativeId={metrica.criativo.id_unico} />
@@ -983,16 +1012,50 @@ export default function CreativesManagement() {
                         <CreativeStatusBadge status={metrica.criativo.status || 'nao_validado'} />
                       </TableCell>
                       <TableCell className="text-center">
+                        {hasMetrics ? <MetricBadge value={metrica.roas || 0} metricType="roas" thresholds={thresholds} format={formatRoas} /> : '—'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {hasMetrics ? <MetricBadge value={metrica.ic || 0} metricType="ic" thresholds={thresholds} format={formatCurrency} /> : '—'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {hasMetrics ? <MetricBadge value={metrica.cpc || 0} metricType="cpc" thresholds={thresholds} format={formatCurrency} /> : '—'}
+                      </TableCell>
+                      <TableCell className="text-center">
                         <TooltipProvider delayDuration={100}>
                         <div className="flex items-center justify-center gap-1">
-                          <Popover>
+                          {hasMetrics && <Popover>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Ver histórico diário">
+                                    <History className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>Histórico diário</TooltipContent>
+                            </Tooltip>
+                            <PopoverContent className="w-80" align="end">
+                              <p className="border-b pb-2 text-sm font-semibold">Histórico diário</p>
+                              <div className="mt-2 max-h-72 space-y-2 overflow-y-auto pr-1">
+                                {historico.map((dia) => (
+                                  <div key={dia.id} className="grid grid-cols-[1fr_auto] gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                                    <span className="font-medium">{formatDate(dia.data)}</span>
+                                    <span>ROAS {formatRoas(dia.roas || 0)}</span>
+                                    <span>{formatCurrency(dia.spend || 0)} investidos</span>
+                                    <span>{(dia.conversoes || 0).toLocaleString('pt-BR')} conversões</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>}
+                          {hasMetrics && <Popover>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <PopoverTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-9 w-9"
                                   >
                                     <BarChart2 className="h-4 w-4" />
                                   </Button>
@@ -1040,7 +1103,7 @@ export default function CreativesManagement() {
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">Cliques</span>
-                                    <span className="text-xs font-medium">{(metrica.cliques || 0).toLocaleString('de-DE')}</span>
+                                    <span className="text-xs font-medium">{(metrica.cliques || 0).toLocaleString('pt-BR')}</span>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-xs text-muted-foreground">Impressões</span>
@@ -1061,13 +1124,13 @@ export default function CreativesManagement() {
                                 </div>
                               </div>
                             </PopoverContent>
-                          </Popover>
+                          </Popover>}
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-9 w-9"
                                 onClick={() => openEditDialog(metrica.criativo!.id)}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -1085,6 +1148,7 @@ export default function CreativesManagement() {
             </TableBody>
           </Table>
           </Card>
+          <ListPagination page={currentPage} pageSize={pageSize} totalItems={sortedMetricas.length} onPageChange={setPage} />
         </>
       )}
 

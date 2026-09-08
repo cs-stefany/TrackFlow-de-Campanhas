@@ -65,11 +65,26 @@ function getDateRange(tipo: PeriodoTipo): { dataInicio: string; dataFim: string 
   }
 }
 
-export function usePeriodo(initialTipo: PeriodoTipo = '7d') {
-  const [periodo, setPeriodoState] = useState<PeriodoValue>(() => ({
-    tipo: initialTipo,
-    ...getDateRange(initialTipo),
-  }));
+export function usePeriodo(initialTipo: PeriodoTipo = '7d', storageKey?: string) {
+  const [periodo, setPeriodoState] = useState<PeriodoValue>(() => {
+    if (storageKey && typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved) as PeriodoValue;
+          if (['today', '7d', '30d', 'custom', 'all'].includes(parsed.tipo)) {
+            return parsed.tipo === 'custom'
+              ? parsed
+              : { tipo: parsed.tipo, ...getDateRange(parsed.tipo) };
+          }
+        }
+      } catch {
+        // Ignora preferências antigas ou indisponíveis.
+      }
+    }
+
+    return { tipo: initialTipo, ...getDateRange(initialTipo) };
+  });
 
   // Recalcula as datas quando o tipo muda (exceto custom)
   const setPeriodo = (newValue: PeriodoValue) => {
@@ -95,6 +110,16 @@ export function usePeriodo(initialTipo: PeriodoTipo = '7d') {
       }));
     }
   }, [periodo.tipo]);
+
+  useEffect(() => {
+    if (!storageKey || typeof window === 'undefined') return;
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(periodo));
+    } catch {
+      // Mantém o filtro funcional quando o armazenamento está indisponível.
+    }
+  }, [periodo, storageKey]);
 
   return { periodo, setPeriodo };
 }
