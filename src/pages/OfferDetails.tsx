@@ -28,11 +28,13 @@ import { LancarMetricaDialog } from '@/components/LancarMetricaDialog';
 import { BulkMetricasDialog } from '@/components/BulkMetricasDialog';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
 import { ThresholdsDialog } from '@/components/ThresholdsDialog';
+import { QueryErrorState } from '@/components/QueryErrorState';
 import { formatCurrency, formatRoas, getMetricStatus, getMetricClass, copyToClipboard } from '@/lib/metrics';
 import { formatDate } from '@/lib/format';
 import { parseThresholds, type Thresholds, type Criativo, type MetricaDiariaOferta } from '@/services/api';
 import { useOferta, useMetricasOferta, useCriativosPorOferta, useCopywriters, useMetricasDiariasComCriativo } from '@/hooks/useSupabase';
 import { cn } from '@/lib/utils';
+import { refetchQueries } from '@/lib/query';
 import { toast } from 'sonner';
 
 type SortField = 'roas' | 'ic' | 'cpc' | 'spend' | null;
@@ -91,30 +93,41 @@ export default function OfferDetails() {
   const [lancarMetricaFonte, setLancarMetricaFonte] = useState<string | undefined>(undefined);
   const [isThresholdsDialogOpen, setIsThresholdsDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Supabase hooks - pass periodo for filtering
-  const { data: oferta, isLoading: isLoadingOferta, refetch: refetchOferta } = useOferta(id || '');
-  const { data: metricasOferta, isLoading: isLoadingMetricas, refetch: refetchMetricas } = useMetricasOferta(id || '', periodo.tipo !== 'custom' ? periodo.tipo : undefined);
-  const { data: criativosFB, isLoading: isLoadingFB, refetch: refetchFB } = useCriativosPorOferta(id || '', 'facebook');
-  const { data: criativosYT, isLoading: isLoadingYT, refetch: refetchYT } = useCriativosPorOferta(id || '', 'youtube');
-  const { data: criativosTT, isLoading: isLoadingTT, refetch: refetchTT } = useCriativosPorOferta(id || '', 'tiktok');
-  const { data: metricasCriativos, refetch: refetchCriativosMedias } = useMetricasDiariasComCriativo({
+  const { data: oferta, isLoading: isLoadingOferta, isError: isOfertaError, refetch: refetchOferta } = useOferta(id || '');
+  const { data: metricasOferta, isLoading: isLoadingMetricas, isError: isMetricasError, refetch: refetchMetricas } = useMetricasOferta(id || '', periodo.tipo !== 'custom' ? periodo.tipo : undefined);
+  const { data: criativosFB, isLoading: isLoadingFB, isError: isFBError, refetch: refetchFB } = useCriativosPorOferta(id || '', 'facebook');
+  const { data: criativosYT, isLoading: isLoadingYT, isError: isYTError, refetch: refetchYT } = useCriativosPorOferta(id || '', 'youtube');
+  const { data: criativosTT, isLoading: isLoadingTT, isError: isTTError, refetch: refetchTT } = useCriativosPorOferta(id || '', 'tiktok');
+  const { data: metricasCriativos, isError: isMetricasCriativosError, refetch: refetchCriativosMedias } = useMetricasDiariasComCriativo({
     ofertaId: id || '',
     dataInicio: periodo.dataInicio,
     dataFim: periodo.dataFim,
   });
-  const { data: copywriters } = useCopywriters();
+  const { data: copywriters, isError: isCopywritersError, refetch: refetchCopywriters } = useCopywriters();
 
   const isLoading = isLoadingOferta || isLoadingMetricas;
   
-  const handleRefreshAll = () => {
-    refetchOferta();
-    refetchMetricas();
-    refetchFB();
-    refetchYT();
-    refetchTT();
-    refetchCriativosMedias();
-    toast.success('Dados atualizados!');
+  const handleRefreshAll = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchQueries([
+        refetchOferta,
+        refetchMetricas,
+        refetchFB,
+        refetchYT,
+        refetchTT,
+        refetchCriativosMedias,
+        refetchCopywriters,
+      ]);
+      toast.success('Dados atualizados!');
+    } catch {
+      toast.error('Não foi possível atualizar os dados.');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const creativeMetricsById = useMemo(() => {
@@ -577,6 +590,10 @@ export default function OfferDetails() {
     );
   }
 
+  if (isOfertaError || isMetricasError || isFBError || isYTError || isTTError || isMetricasCriativosError || isCopywritersError) {
+    return <QueryErrorState onRetry={handleRefreshAll} isRetrying={isRefreshing} />;
+  }
+
   if (!oferta) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -609,9 +626,10 @@ export default function OfferDetails() {
           variant="outline"
           className="h-11 w-11 shrink-0 gap-2 px-0 sm:h-10 sm:w-auto sm:px-4"
           onClick={handleRefreshAll}
+          disabled={isRefreshing}
           aria-label="Atualizar dados"
         >
-          <RefreshCw className="h-4 w-4" />
+          {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>

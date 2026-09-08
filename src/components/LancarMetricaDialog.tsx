@@ -30,6 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { toast } from 'sonner';
 import { useCriativosPorOferta, useUpsertMetricaDiaria, useMetricaExistente } from "@/hooks/useSupabase";
 import type { Criativo, MetricaDiaria } from "@/services/api";
@@ -102,6 +103,9 @@ export function LancarMetricaDialog({
     cliques: false,
     conversoes: false,
   });
+  const isDirty = (step === "new_form" && Boolean(spend || faturado || impressoes || cliques || conversoes)) ||
+    (step === "edit_existing" && Object.values(fieldsToEdit).some(Boolean));
+  const confirmDiscard = useUnsavedChanges(open && isDirty);
 
   const { data: criativos, isLoading: isLoadingCriativos } = useCriativosPorOferta(
     ofertaId,
@@ -161,6 +165,7 @@ export function LancarMetricaDialog({
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
+      if (!confirmDiscard()) return;
       resetForm();
     }
     onOpenChange(newOpen);
@@ -340,7 +345,8 @@ export function LancarMetricaDialog({
         : 'Métricas salvas com sucesso!'
       );
 
-      handleOpenChange(false);
+      resetForm();
+      onOpenChange(false);
     } catch (error) {
       toast.error('Falha ao salvar métricas. Tente novamente.');
     }

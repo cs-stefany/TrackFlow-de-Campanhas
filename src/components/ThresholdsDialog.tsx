@@ -19,6 +19,7 @@ import { parseThresholds, type Oferta, type Thresholds } from '@/services/api';
 import { getMetricStatus, formatRoas, formatCurrency } from '@/lib/metrics';
 import { formatDate, formatDateInput } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 interface ThresholdsDialogProps {
   open: boolean;
@@ -74,6 +75,16 @@ export function ThresholdsDialog({
   // Verificar se é data de hoje
   const hoje = formatDateInput(new Date());
   const isHistorico = dataMetrica && dataMetrica !== hoje;
+  const originalThresholds = parseThresholds(oferta?.thresholds);
+  const isDirty = mode === 'edit' && (
+    roasVerde !== originalThresholds.roas.verde.toString() ||
+    roasAmarelo !== originalThresholds.roas.amarelo.toString() ||
+    icVerde !== originalThresholds.ic.verde.toString() ||
+    icAmarelo !== originalThresholds.ic.amarelo.toString() ||
+    cpcVerde !== originalThresholds.cpc.verde.toString() ||
+    cpcAmarelo !== originalThresholds.cpc.amarelo.toString()
+  );
+  const confirmDiscard = useUnsavedChanges(open && isDirty);
 
   // Initialize form values when dialog opens or oferta changes
   useEffect(() => {
@@ -151,9 +162,12 @@ export function ThresholdsDialog({
     setMode('view');
   };
 
-  const handleClose = () => {
-    setMode('view');
-    onOpenChange(false);
+  const handleClose = (newOpen: boolean) => {
+    if (!newOpen) {
+      if (!confirmDiscard()) return;
+      setMode('view');
+    }
+    onOpenChange(newOpen);
   };
 
   if (!oferta) return null;

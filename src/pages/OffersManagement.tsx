@@ -57,15 +57,19 @@ import { ListPagination } from '@/components/ListPagination';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
 import { ThresholdsDialog } from '@/components/ThresholdsDialog';
+import { QueryErrorState } from '@/components/QueryErrorState';
 import { formatCurrency, formatRoas, getMetricStatus, getMetricClass } from '@/lib/metrics';
 import { formatDate, formatDateInput } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { refetchQueries } from '@/lib/query';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { toast } from 'sonner';
 import {
   useOfertas,
   useCreateOferta,
   useUpdateOferta,
   useArchiveOferta,
+  useRestoreOfertaCompleta,
   useNichos,
   usePaises,
   useCreateNicho,
@@ -87,13 +91,13 @@ export default function OffersManagement() {
   const { periodo, setPeriodo } = usePeriodo('7d', 'trackflow:ofertas:periodo');
   
   // Supabase hooks - agora busca métricas diárias com JOIN na oferta
-  const { data: metricasDiarias, isLoading: isLoadingMetricas, refetch: refetchMetricas } = useMetricasDiariasComOferta({
+  const { data: metricasDiarias, isLoading: isLoadingMetricas, isError: isMetricasError, isFetching: isFetchingMetricas, refetch: refetchMetricas } = useMetricasDiariasComOferta({
     dataInicio: periodo.dataInicio,
     dataFim: periodo.dataFim,
   });
-  const { data: ofertas, isLoading: isLoadingOfertas, refetch: refetchOfertas } = useOfertas();
-  const { data: nichos, isLoading: isLoadingNichos } = useNichos();
-  const { data: paises, isLoading: isLoadingPaises } = usePaises();
+  const { data: ofertas, isLoading: isLoadingOfertas, isError: isOfertasError, isFetching: isFetchingOfertas, refetch: refetchOfertas } = useOfertas();
+  const { data: nichos, isLoading: isLoadingNichos, isError: isNichosError, refetch: refetchNichos } = useNichos();
+  const { data: paises, isLoading: isLoadingPaises, isError: isPaisesError, refetch: refetchPaises } = usePaises();
 
   // Extrair oferta_ids únicos das métricas para buscar thresholds históricos
   const ofertaIdsFromMetricas = Array.from(
@@ -113,6 +117,7 @@ export default function OffersManagement() {
   const createOfertaMutation = useCreateOferta();
   const updateOfertaMutation = useUpdateOferta();
   const archiveOfertaMutation = useArchiveOferta();
+  const restoreOfertaCompletaMutation = useRestoreOfertaCompleta();
   const createNichoMutation = useCreateNicho();
   const createPaisMutation = useCreatePais();
   
@@ -131,6 +136,7 @@ export default function OffersManagement() {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const pageSize = 8;
   const isLoadingList = isLoadingMetricas || isLoadingOfertas;
   
@@ -154,14 +160,47 @@ export default function OffersManagement() {
   const [editCountry, setEditCountry] = useState('');
   const [editStatus, setEditStatus] = useState('');
 
+  const isNewOfferDirty = Boolean(
+    newOfferName || newOfferNiche || newOfferCountry || newOfferStatus !== 'ativo' ||
+    roasGreen !== '1.30' || roasYellow !== '1.10' || icGreen !== '50.00' ||
+    icYellow !== '60.00' || cpcGreen !== '1.50' || cpcYellow !== '2.00'
+  );
+  const isEditOfferDirty = Boolean(editingOffer && (
+    editName !== editingOffer.nome || editNiche !== editingOffer.nicho ||
+    editCountry !== editingOffer.pais || editStatus !== (editingOffer.status || 'ativo')
+  ));
+  const confirmDiscardNewOffer = useUnsavedChanges(isSheetOpen && isNewOfferDirty);
+  const confirmDiscardEditOffer = useUnsavedChanges(isEditSheetOpen && isEditOfferDirty);
+
   // Convert nichos/paises to combobox options
   const nichosOptions = (nichos || []).map(n => ({ value: n.nome, label: n.nome }));
   const paisesOptions = (paises || []).map(p => ({ value: p.nome, label: p.nome }));
 
   // Refresh function
   const handleRefresh = async () => {
-    await Promise.all([refetchMetricas(), refetchOfertas()]);
-    toast.success('Dados atualizados!');
+    setIsRefreshing(true);
+    try {
+      await refetchQueries([refetchMetricas, refetchOfertas, refetchNichos, refetchPaises]);
+      toast.success('Dados atualizados!');
+    } catch {
+      toast.error('Não foi possível atualizar os dados.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleNewSheetOpenChange = (open: boolean) => {
+    if (!open) {
+      if (!confirmDiscardNewOffer()) return;
+      resetNewOfferForm();
+    }
+    setIsSheetOpen(open);
+  };
+
+  const handleEditSheetOpenChange = (open: boolean) => {
+    if (!open && !confirmDiscardEditOffer()) return;
+    setIsEditSheetOpen(open);
+    if (!open) setEditingOffer(null);
   };
 
   const handleSort = (field: SortField) => {
@@ -410,7 +449,18 @@ export default function OffersManagement() {
           });
         }
 
-        toast.success('Oferta arquivada com sucesso. Todos os criativos vinculados também foram arquivados.');
+        const archivedOfferId = editingOffer.id;
+        toast.success('Oferta e criativos arquivados.', {
+          duration: 8000,
+          action: {
+            label: 'Desfazer',
+            onClick: () => {
+              void restoreOfertaCompletaMutation.mutateAsync(archivedOfferId)
+                .then(() => toast.success('Arquivamento desfeito.'))
+                .catch(() => toast.error('Não foi possível desfazer o arquivamento.'));
+            },
+          },
+        });
       } else {
         // Atualização normal (sem arquivamento)
         const updates: OfertaUpdate = {};
@@ -435,6 +485,12 @@ export default function OffersManagement() {
       toast.error(error instanceof Error ? error.message : 'Erro ao atualizar oferta');
     }
   };
+
+  const hasQueryError = isMetricasError || isOfertasError || isNichosError || isPaisesError;
+
+  if (hasQueryError && !isLoadingList) {
+    return <QueryErrorState onRetry={handleRefresh} isRetrying={isRefreshing || isFetchingMetricas || isFetchingOfertas} />;
+  }
 
   const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <TableHead
@@ -480,16 +536,16 @@ export default function OffersManagement() {
             size="sm" 
             className="h-11 gap-2 sm:h-9"
             onClick={handleRefresh}
-            disabled={isLoadingList}
+            disabled={isLoadingList || isRefreshing}
           >
-            {isLoadingList ? (
+            {isLoadingList || isRefreshing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
             Atualizar
           </Button>
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <Sheet open={isSheetOpen} onOpenChange={handleNewSheetOpenChange}>
             <SheetTrigger asChild>
               <Button className="h-11 gap-2 sm:h-10">
                 <Plus className="h-4 w-4" />
@@ -686,7 +742,7 @@ export default function OffersManagement() {
                 </div>
               </ScrollArea>
               <SheetFooter className="grid shrink-0 grid-cols-2 gap-2 space-y-0 border-t bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6">
-                <Button variant="outline" onClick={() => setIsSheetOpen(false)}>
+                <Button variant="outline" onClick={() => handleNewSheetOpenChange(false)}>
                   Cancelar
                 </Button>
                 <Button 
@@ -1188,7 +1244,7 @@ export default function OffersManagement() {
       />
 
       {/* Edit Sheet */}
-      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+      <Sheet open={isEditSheetOpen} onOpenChange={handleEditSheetOpenChange}>
         <SheetContent className="flex h-[100dvh] w-full max-w-full flex-col overflow-hidden p-0 sm:w-[550px] sm:max-w-xl">
           <SheetHeader className="shrink-0 px-6 pb-2 pt-6">
             <SheetTitle>Editar Oferta</SheetTitle>
@@ -1258,7 +1314,7 @@ export default function OffersManagement() {
             </div>
           </ScrollArea>
           <SheetFooter className="grid shrink-0 grid-cols-2 gap-2 space-y-0 border-t bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6">
-            <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>
+            <Button variant="outline" onClick={() => handleEditSheetOpenChange(false)}>
               Cancelar
             </Button>
             <Button 

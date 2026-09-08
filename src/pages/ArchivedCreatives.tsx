@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/tooltip';
 import { CreativeCard } from '@/components/CreativeCard';
 import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
+import { QueryErrorState } from '@/components/QueryErrorState';
 import { MetricBadge } from '@/components/MetricBadge';
 import { PeriodoFilter, usePeriodo } from '@/components/PeriodoFilter';
 import { formatDate } from '@/lib/format';
@@ -52,6 +53,7 @@ import {
 } from '@/hooks/useSupabase';
 import type { Criativo, Oferta } from '@/services/api';
 import { cn } from '@/lib/utils';
+import { refetchQueries } from '@/lib/query';
 
 // Convert thresholds to format expected by metrics utils
 function convertThresholds(thresholds: ReturnType<typeof parseThresholds>) {
@@ -69,6 +71,7 @@ export default function ArchivedCreatives() {
   const [sourceFilter, setSourceFilter] = useState<string>('all');
   const [copywriterFilter, setCopywriterFilter] = useState<string>('all');
   const { periodo, setPeriodo } = usePeriodo('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -84,10 +87,10 @@ export default function ArchivedCreatives() {
   const [metricsCreative, setMetricsCreative] = useState<Criativo | null>(null);
 
   // Hooks - usar useOfertas() para obter todas as ofertas (inclusive arquivadas)
-  const { data: criativos, isLoading, refetch } = useCriativosArquivados();
-  const { data: ofertas } = useOfertas();
-  const { data: copywriters } = useCopywriters();
-  const { data: aggregatedMetrics } = useAllCriativosAggregatedMetrics();
+  const { data: criativos, isLoading, isError: isCriativosError, refetch: refetchCriativos } = useCriativosArquivados();
+  const { data: ofertas, isError: isOfertasError, refetch: refetchOfertas } = useOfertas();
+  const { data: copywriters, isError: isCopywritersError, refetch: refetchCopywriters } = useCopywriters();
+  const { data: aggregatedMetrics, isError: isMetricsError, refetch: refetchMetrics } = useAllCriativosAggregatedMetrics();
   const updateCriativo = useUpdateCriativo();
   const deleteCriativo = useDeleteCriativo();
 
@@ -170,7 +173,7 @@ export default function ArchivedCreatives() {
     try {
       await updateCriativo.mutateAsync({
         id: restoreCreative.id,
-        updates: { status: 'pausado' }
+        updates: { status: 'pausado', archived_at: null }
       });
       toast.success(`"${restoreCreative.id_unico}" foi restaurado com status pausado.`);
       setIsRestoreDialogOpen(false);
@@ -199,9 +202,16 @@ export default function ArchivedCreatives() {
     }
   };
 
-  const handleRefresh = () => {
-    refetch();
-    toast.success('Lista de criativos arquivados foi atualizada.');
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchQueries([refetchCriativos, refetchOfertas, refetchCopywriters, refetchMetrics]);
+      toast.success('Lista de criativos arquivados foi atualizada.');
+    } catch {
+      toast.error('Não foi possível atualizar a lista.');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const isDeleteEnabled = selectedCreative && deleteConfirmId === selectedCreative.id_unico;
@@ -237,6 +247,10 @@ export default function ArchivedCreatives() {
     return convertThresholds(parseThresholds(offer?.thresholds || null));
   }, [metricsCreative, getOffer]);
 
+  if (isCriativosError || isOfertasError || isCopywritersError || isMetricsError) {
+    return <QueryErrorState onRetry={handleRefresh} isRetrying={isRefreshing} />;
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -258,8 +272,8 @@ export default function ArchivedCreatives() {
             {filteredCreatives.length} criativo(s) arquivado(s)
           </p>
         </div>
-        <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-9" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
+        <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-9" onClick={handleRefresh} disabled={isRefreshing}>
+          {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>

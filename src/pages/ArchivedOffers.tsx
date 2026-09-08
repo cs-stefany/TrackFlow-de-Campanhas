@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/tooltip';
 import { OfferCard } from '@/components/OfferCard';
 import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
+import { QueryErrorState } from '@/components/QueryErrorState';
 import { PeriodoFilter, usePeriodo } from '@/components/PeriodoFilter';
 import { toast } from 'sonner';
 import {
@@ -43,6 +44,7 @@ import { fetchCriativosArquivadosComOferta } from '@/services/api';
 import type { Oferta, Criativo } from '@/services/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { refetchQueries } from '@/lib/query';
 
 export default function ArchivedOffers() {
   const navigate = useNavigate();
@@ -50,6 +52,7 @@ export default function ArchivedOffers() {
   const [nicheFilter, setNicheFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const { periodo, setPeriodo } = usePeriodo('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -64,11 +67,11 @@ export default function ArchivedOffers() {
   const [isLoadingCriativos, setIsLoadingCriativos] = useState(false);
 
   // Hooks
-  const { data: ofertas, isLoading, refetch } = useOfertasArquivadas();
-  const { data: nichos } = useNichos();
-  const { data: paises } = usePaises();
-  const { data: aggregatedMetrics } = useAllOffersAggregatedMetrics();
-  const { data: creativesCountByOffer } = useCreativesCountByOffer();
+  const { data: ofertas, isLoading, isError: isOfertasError, refetch: refetchOfertas } = useOfertasArquivadas();
+  const { data: nichos, isError: isNichosError, refetch: refetchNichos } = useNichos();
+  const { data: paises, isError: isPaisesError, refetch: refetchPaises } = usePaises();
+  const { data: aggregatedMetrics, isError: isMetricsError, refetch: refetchMetrics } = useAllOffersAggregatedMetrics();
+  const { data: creativesCountByOffer, isError: isCountError, refetch: refetchCount } = useCreativesCountByOffer();
   const updateOferta = useUpdateOferta();
   const deleteOferta = useDeleteOferta();
   const restoreOfertaMutation = useRestoreOferta();
@@ -177,9 +180,16 @@ export default function ArchivedOffers() {
     }
   };
 
-  const handleRefresh = () => {
-    refetch();
-    toast.success('Lista de ofertas arquivadas foi atualizada.');
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchQueries([refetchOfertas, refetchNichos, refetchPaises, refetchMetrics, refetchCount]);
+      toast.success('Lista de ofertas arquivadas foi atualizada.');
+    } catch {
+      toast.error('Não foi possível atualizar a lista.');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const isDeleteEnabled = selectedOffer && deleteConfirmName === selectedOffer.nome;
@@ -190,6 +200,10 @@ export default function ArchivedOffers() {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (isOfertasError || isNichosError || isPaisesError || isMetricsError || isCountError) {
+    return <QueryErrorState onRetry={handleRefresh} isRetrying={isRefreshing} />;
   }
 
   return (
@@ -205,8 +219,8 @@ export default function ArchivedOffers() {
             {filteredOffers.length} oferta(s) arquivada(s)
           </p>
         </div>
-        <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-9" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4 mr-2" />
+        <Button variant="outline" size="sm" className="h-11 shrink-0 sm:h-9" onClick={handleRefresh} disabled={isRefreshing}>
+          {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
           <span className="hidden sm:inline">Atualizar</span>
         </Button>
       </div>

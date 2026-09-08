@@ -12,8 +12,10 @@ import {
 import { KPIDualCard } from '@/components/KPICard';
 import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { OfferCard } from '@/components/OfferCard';
+import { QueryErrorState } from '@/components/QueryErrorState';
 import { formatCurrency, formatRoas, getMetricStatus } from '@/lib/metrics';
 import { parseThresholds } from '@/services/api';
+import { refetchQueries } from '@/lib/query';
 import {
   useOfertas,
   useTotaisOfertas,
@@ -40,25 +42,37 @@ export default function Dashboard() {
   const [countryFilter, setCountryFilter] = useState<string>('all');
   const [healthFilter, setHealthFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'ativo' | 'pausado'>('ativo');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Supabase hooks - busca todas as ofertas (exceto arquivadas) para permitir filtro por status
-  const { data: todasOfertas, isLoading: isLoadingOfertas, refetch: refetchOfertas } = useOfertas();
-  const { data: totais, isLoading: isLoadingTotais, refetch: refetchTotais } = useTotaisOfertas();
-  const { data: contadorCriativos, isLoading: isLoadingContador, refetch: refetchContador } = useContadorCriativos();
-  const { data: nichos } = useNichos();
-  const { data: paises } = usePaises();
-  const { data: aggregatedMetrics, refetch: refetchMetrics } = useAllOffersAggregatedMetrics();
-  const { data: creativesCountByOffer, refetch: refetchCreativesCount } = useCreativesCountByOffer();
+  const { data: todasOfertas, isLoading: isLoadingOfertas, isError: isOfertasError, refetch: refetchOfertas } = useOfertas();
+  const { data: totais, isLoading: isLoadingTotais, isError: isTotaisError, refetch: refetchTotais } = useTotaisOfertas();
+  const { data: contadorCriativos, isLoading: isLoadingContador, isError: isContadorError, refetch: refetchContador } = useContadorCriativos();
+  const { data: nichos, isError: isNichosError, refetch: refetchNichos } = useNichos();
+  const { data: paises, isError: isPaisesError, refetch: refetchPaises } = usePaises();
+  const { data: aggregatedMetrics, isError: isMetricsError, refetch: refetchMetrics } = useAllOffersAggregatedMetrics();
+  const { data: creativesCountByOffer, isError: isCreativesCountError, refetch: refetchCreativesCount } = useCreativesCountByOffer();
 
   const isLoading = isLoadingOfertas || isLoadingTotais || isLoadingContador;
 
-  const handleRefresh = () => {
-    refetchOfertas();
-    refetchTotais();
-    refetchContador();
-    refetchMetrics();
-    refetchCreativesCount();
-    toast.success('Dados atualizados!');
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchQueries([
+        refetchOfertas,
+        refetchTotais,
+        refetchContador,
+        refetchNichos,
+        refetchPaises,
+        refetchMetrics,
+        refetchCreativesCount,
+      ]);
+      toast.success('Dados atualizados!');
+    } catch {
+      toast.error('Não foi possível atualizar os dados.');
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   // Filtrar ofertas por status (exclui arquivadas)
@@ -98,6 +112,13 @@ export default function Dashboard() {
     return paises?.map(p => p.nome) || [];
   }, [paises]);
 
+  const hasQueryError = isOfertasError || isTotaisError || isContadorError || isNichosError ||
+    isPaisesError || isMetricsError || isCreativesCountError;
+
+  if (hasQueryError && !isLoading) {
+    return <QueryErrorState onRetry={handleRefresh} isRetrying={isRefreshing} />;
+  }
+
   return (
     <div className="space-y-5 sm:space-y-6">
       {/* Header */}
@@ -111,9 +132,9 @@ export default function Dashboard() {
           size="sm" 
           className="h-11 shrink-0 gap-2 sm:h-9"
           onClick={handleRefresh}
-          disabled={isLoading}
+          disabled={isLoading || isRefreshing}
         >
-          {isLoading ? (
+          {isLoading || isRefreshing ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="h-4 w-4" />

@@ -9,6 +9,7 @@ import {
   updateOferta,
   archiveOferta,
   restoreOferta,
+  restoreOfertaCompleta,
   deleteOferta,
   countCriativosArquivadosComOferta,
   // Criativos
@@ -173,6 +174,20 @@ export function useRestoreOferta() {
   return useMutation({
     mutationFn: ({ id, criativoIdsToRestore }: { id: string; criativoIdsToRestore: string[] }) =>
       restoreOferta(id, criativoIdsToRestore),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.ofertas.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.totais() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
+    },
+  });
+}
+
+export function useRestoreOfertaCompleta() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => restoreOfertaCompleta(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ofertas.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });

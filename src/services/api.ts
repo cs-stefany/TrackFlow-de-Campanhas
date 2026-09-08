@@ -19,6 +19,14 @@ export type CriativoUpdate = TablesUpdate<'criativos'>;
 export type MetricaDiariaInsert = TablesInsert<'metricas_diarias'>;
 export type MetricaDiariaUpdate = TablesUpdate<'metricas_diarias'>;
 
+function chunkArray<T>(items: T[], size = 100): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 // Thresholds type
 export interface Thresholds {
   roas: { verde: number; amarelo: number };
@@ -175,6 +183,11 @@ export async function restoreOferta(
     status: 'pausado',
     archived_at: null
   });
+}
+
+export async function restoreOfertaCompleta(id: string) {
+  const criativos = await fetchCriativosArquivadosComOferta(id);
+  return restoreOferta(id, criativos.map((criativo) => criativo.id));
 }
 
 // Conta quantos criativos foram arquivados junto com a oferta
@@ -387,6 +400,28 @@ export async function fetchCriativoByIdUnico(idUnico: string, ofertaId?: string)
   return data;
 }
 
+export async function fetchCriativosByIdsUnicos(idUnicos: string[], ofertaId?: string) {
+  if (idUnicos.length === 0) return [];
+
+  const results = await Promise.all(
+    chunkArray(Array.from(new Set(idUnicos))).map(async (ids) => {
+      let query = supabase
+        .from('criativos')
+        .select('*')
+        .in('id_unico', ids)
+        .neq('status', 'arquivado');
+
+      if (ofertaId) query = query.eq('oferta_id', ofertaId);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    }),
+  );
+
+  return results.flat();
+}
+
 // Verifica se já existe métrica para criativo/data
 export async function checkMetricaExiste(criativoId: string, data: string): Promise<boolean> {
   const { count, error } = await supabase
@@ -397,6 +432,27 @@ export async function checkMetricaExiste(criativoId: string, data: string): Prom
 
   if (error) throw error;
   return (count || 0) > 0;
+}
+
+export async function fetchMetricasExistentes(criativoIds: string[], datas: string[]) {
+  if (criativoIds.length === 0 || datas.length === 0) return [];
+
+  const idChunks = chunkArray(Array.from(new Set(criativoIds)));
+  const dateChunks = chunkArray(Array.from(new Set(datas)));
+  const results = await Promise.all(
+    idChunks.flatMap((ids) => dateChunks.map(async (dates) => {
+      const { data, error } = await supabase
+        .from('metricas_diarias')
+        .select('criativo_id,data')
+        .in('criativo_id', ids)
+        .in('data', dates);
+
+      if (error) throw error;
+      return data || [];
+    })),
+  );
+
+  return results.flat();
 }
 
 export async function updateMetricaDiaria(id: string, updates: MetricaDiariaUpdate) {

@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { fetchCriativoByIdUnico, checkMetricaExiste } from '@/services/api';
+import { fetchCriativosByIdsUnicos, fetchMetricasExistentes } from '@/services/api';
 import { useCreateMetricasBatch } from '@/hooks/useSupabase';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import type { Criativo, MetricaDiariaInsert } from '@/services/api';
 
 interface BulkMetricasDialogProps {
@@ -80,6 +81,9 @@ function parseNumero(valor: string): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+const MAX_CSV_SIZE_BYTES = 2 * 1024 * 1024;
+const MAX_CSV_ROWS = 500;
+
 // Parser de inteiro
 function parseInteiro(valor: string): number | null {
   if (!valor || valor.trim() === '') return null;
@@ -124,6 +128,7 @@ export function BulkMetricasDialog({
   const [fileName, setFileName] = useState<string | null>(null);
 
   const createBatchMutation = useCreateMetricasBatch();
+  const confirmDiscard = useUnsavedChanges(open && Boolean(fileName || parsedRows.length));
 
   const resetState = () => {
     setParsedRows([]);
@@ -131,9 +136,12 @@ export function BulkMetricasDialog({
     setIsProcessing(false);
   };
 
-  const handleClose = () => {
-    resetState();
-    onOpenChange(false);
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      if (!confirmDiscard()) return;
+      resetState();
+    }
+    onOpenChange(newOpen);
   };
 
   const parseCSV = useCallback(async (content: string) => {
@@ -143,6 +151,12 @@ export function BulkMetricasDialog({
 
     if (lines.length < 2) {
       toast.error('Arquivo CSV vazio ou sem dados.');
+      setIsProcessing(false);
+      return;
+    }
+
+    if (lines.length - 1 > MAX_CSV_ROWS) {
+      toast.error(`O arquivo pode ter no máximo ${MAX_CSV_ROWS} linhas.`);
       setIsProcessing(false);
       return;
     }
@@ -206,32 +220,52 @@ export function BulkMetricasDialog({
       rows.push(row);
     }
 
-    // Validar criativos no banco (em paralelo)
-    await Promise.all(
-      rows.map(async (row) => {
-        if (row.erro) return;
+    try {
+      const validRows = rows.filter((row) => !row.erro);
+      const criativos = await fetchCriativosByIdsUnicos(
+        validRows.map((row) => row.id_criativo),
+        ofertaId,
+      );
+      const criativosById = new Map(criativos.map((criativo) => [criativo.id_unico, criativo]));
 
-        try {
-          // Buscar criativo pelo id_unico
-          const criativo = await fetchCriativoByIdUnico(row.id_criativo, ofertaId);
-
-          if (!criativo) {
-            row.erro = `Criativo não encontrado ou não pertence a esta oferta`;
-          } else {
-            row.criativoDb = criativo;
-
-            // Verificar se já existe métrica para esta data
-            const existe = await checkMetricaExiste(criativo.id, row.data);
-            if (existe) {
-              row.jaExiste = true;
-              row.erro = 'Já existe métrica para esta data (será sobrescrita)';
-            }
-          }
-        } catch (error) {
-          row.erro = 'Erro ao validar criativo';
+      validRows.forEach((row) => {
+        const criativo = criativosById.get(row.id_criativo);
+        if (!criativo) {
+          row.erro = 'Criativo não encontrado ou não pertence a esta oferta';
+          return;
         }
-      })
-    );
+        row.criativoDb = criativo;
+      });
+
+      const mappedRows = validRows.filter((row) => row.criativoDb && !row.erro);
+      const metricasExistentes = await fetchMetricasExistentes(
+        mappedRows.map((row) => row.criativoDb!.id),
+        mappedRows.map((row) => row.data),
+      );
+      const metricasSet = new Set(
+        metricasExistentes.map((metrica) => `${metrica.criativo_id}|${metrica.data}`),
+      );
+      const linhasSet = new Set<string>();
+
+      mappedRows.forEach((row) => {
+        const key = `${row.criativoDb!.id}|${row.data}`;
+        if (linhasSet.has(key)) {
+          row.erro = 'Linha duplicada no arquivo';
+          return;
+        }
+        linhasSet.add(key);
+
+        if (metricasSet.has(key)) {
+          row.jaExiste = true;
+          row.erro = 'Já existe métrica para esta data (será sobrescrita)';
+        }
+      });
+    } catch {
+      toast.error('Não foi possível validar o arquivo. Tente novamente.');
+      rows.forEach((row) => {
+        if (!row.erro) row.erro = 'Erro ao validar a linha';
+      });
+    }
 
     setParsedRows(rows);
     setIsProcessing(false);
@@ -240,6 +274,11 @@ export function BulkMetricasDialog({
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.name.endsWith('.csv')) {
       toast.error('Por favor, selecione um arquivo CSV.');
+      return;
+    }
+
+    if (file.size > MAX_CSV_SIZE_BYTES) {
+      toast.error('O arquivo pode ter no máximo 2 MB.');
       return;
     }
 
@@ -312,7 +351,8 @@ export function BulkMetricasDialog({
     try {
       await createBatchMutation.mutateAsync(metricas);
       toast.success(`${metricas.length} métrica(s) importada(s) com sucesso!`);
-      handleClose();
+      resetState();
+      onOpenChange(false);
     } catch (error) {
       toast.error('Erro ao importar métricas. Tente novamente.');
     }
@@ -333,7 +373,7 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="flex max-h-[90dvh] max-w-4xl flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">

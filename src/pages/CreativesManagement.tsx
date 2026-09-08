@@ -56,12 +56,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { MetricBadge } from '@/components/MetricBadge';
 import { MobileFiltersSheet } from '@/components/MobileFiltersSheet';
 import { ListPagination } from '@/components/ListPagination';
+import { QueryErrorState } from '@/components/QueryErrorState';
 import { VideoThumbnail } from '@/components/VideoPlayerDialog';
 import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { PeriodoFilter, usePeriodo, type PeriodoValue } from '@/components/PeriodoFilter';
 import { formatCurrency, formatRoas, copyToClipboard } from '@/lib/metrics';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { refetchQueries } from '@/lib/query';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { toast } from 'sonner';
 import {
   useCriativos,
@@ -145,14 +148,14 @@ export default function CreativesManagement() {
   const { periodo, setPeriodo } = usePeriodo('7d', 'trackflow:criativos:periodo');
 
   // Supabase hooks
-  const { data: metricasDiarias, isLoading: isLoadingMetricas, refetch } = useMetricasDiariasComCriativo({
+  const { data: metricasDiarias, isLoading: isLoadingMetricas, isError: isMetricasError, isFetching: isFetchingMetricas, refetch: refetchMetricas } = useMetricasDiariasComCriativo({
     dataInicio: periodo.dataInicio,
     dataFim: periodo.dataFim,
   });
-  const { data: criativos, isLoading: isLoadingCriativos } = useCriativos(); // Keep for edit dialog
-  const { data: ofertasAtivas } = useOfertasAtivas();
-  const { data: todasOfertas, isLoading: isLoadingTodasOfertas } = useOfertas();
-  const { data: copywriters, isLoading: isLoadingCopywriters } = useCopywriters();
+  const { data: criativos, isLoading: isLoadingCriativos, isError: isCriativosError, isFetching: isFetchingCriativos, refetch: refetchCriativos } = useCriativos(); // Keep for edit dialog
+  const { data: ofertasAtivas, isError: isOfertasAtivasError, refetch: refetchOfertasAtivas } = useOfertasAtivas();
+  const { data: todasOfertas, isLoading: isLoadingTodasOfertas, isError: isOfertasError, refetch: refetchOfertas } = useOfertas();
+  const { data: copywriters, isLoading: isLoadingCopywriters, isError: isCopywritersError, refetch: refetchCopywriters } = useCopywriters();
   const ofertasDisponiveis = useMemo(
     () => (todasOfertas || []).filter((oferta) => oferta.status !== 'arquivado'),
     [todasOfertas]
@@ -191,6 +194,7 @@ export default function CreativesManagement() {
   const [sortField, setSortField] = useState<SortField>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const pageSize = 8;
   const isLoadingList = isLoadingMetricas || isLoadingCriativos || isLoadingTodasOfertas;
 
@@ -212,6 +216,19 @@ export default function CreativesManagement() {
   const [editStatus, setEditStatus] = useState('');
   const [editUrl, setEditUrl] = useState('');
   const [editObservations, setEditObservations] = useState('');
+
+  const isNewCreativeDirty = Boolean(
+    newOferta || newIdUnico !== 'ID01_OFERTA_WL1' || newFonte || newCopywriter ||
+    newStatus !== 'em_teste' || newUrl || newObservacoes
+  );
+  const isEditCreativeDirty = Boolean(editingCreative && (
+    editOffer !== (editingCreative.oferta_id || '') || editId !== editingCreative.id_unico ||
+    editSource !== editingCreative.fonte || editCopywriter !== (editingCreative.copy_responsavel || '') ||
+    editStatus !== (editingCreative.status || 'em_teste') || editUrl !== (editingCreative.url || '') ||
+    editObservations !== (editingCreative.observacoes || '')
+  ));
+  const confirmDiscardNewCreative = useUnsavedChanges(isDialogOpen && isNewCreativeDirty);
+  const confirmDiscardEditCreative = useUnsavedChanges(isEditDialogOpen && isEditCreativeDirty);
 
   // Convert copywriters to combobox options
   const copywritersOptions = (copywriters || []).map(c => ({ value: c.nome, label: c.nome }));
@@ -367,6 +384,38 @@ export default function CreativesManagement() {
     setNewObservacoes('');
   };
 
+  const handleNewDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      if (!confirmDiscardNewCreative()) return;
+      resetNewForm();
+    }
+    setIsDialogOpen(open);
+  };
+
+  const handleEditDialogOpenChange = (open: boolean) => {
+    if (!open && !confirmDiscardEditCreative()) return;
+    setIsEditDialogOpen(open);
+    if (!open) setEditingCreative(null);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetchQueries([
+        refetchMetricas,
+        refetchCriativos,
+        refetchOfertasAtivas,
+        refetchOfertas,
+        refetchCopywriters,
+      ]);
+      toast.success('Dados atualizados!');
+    } catch {
+      toast.error('Não foi possível atualizar os dados.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleCreateCriativo = async () => {
     if (!newOferta || !newIdUnico || !newFonte || !newCopywriter || !newStatus || !newUrl) {
       toast.error('Preencha todos os campos obrigatórios');
@@ -463,12 +512,35 @@ export default function CreativesManagement() {
       if (editUrl !== (editingCreative.url || '')) updates.url = editUrl || null;
       if (editObservations !== (editingCreative.observacoes || '')) updates.observacoes = editObservations || null;
 
-      await updateCriativoMutation.mutateAsync({
-        id: editingCreative.id,
-        updates,
-      });
+      const isArchiving = editStatus === 'arquivado' && editingCreative.status !== 'arquivado';
 
-      toast.success('As alterações foram salvas com sucesso.');
+      if (isArchiving) {
+        delete updates.status;
+        await archiveCriativoMutation.mutateAsync(editingCreative.id);
+        if (Object.keys(updates).length > 0) {
+          await updateCriativoMutation.mutateAsync({ id: editingCreative.id, updates });
+        }
+
+        const archivedCreativeId = editingCreative.id;
+        const previousStatus = editingCreative.status || 'em_teste';
+        toast.success('Criativo arquivado.', {
+          duration: 8000,
+          action: {
+            label: 'Desfazer',
+            onClick: () => {
+              void updateCriativoMutation.mutateAsync({
+                id: archivedCreativeId,
+                updates: { status: previousStatus, archived_at: null },
+              })
+                .then(() => toast.success('Arquivamento desfeito.'))
+                .catch(() => toast.error('Não foi possível desfazer o arquivamento.'));
+            },
+          },
+        });
+      } else {
+        await updateCriativoMutation.mutateAsync({ id: editingCreative.id, updates });
+        toast.success('As alterações foram salvas com sucesso.');
+      }
 
       setIsConfirmDialogOpen(false);
       setIsEditDialogOpen(false);
@@ -477,6 +549,12 @@ export default function CreativesManagement() {
       toast.error(error instanceof Error ? error.message : 'Erro ao atualizar criativo');
     }
   };
+
+  const hasQueryError = isMetricasError || isCriativosError || isOfertasAtivasError || isOfertasError || isCopywritersError;
+
+  if (hasQueryError && !isLoadingList) {
+    return <QueryErrorState onRetry={handleRefresh} isRetrying={isRefreshing || isFetchingMetricas || isFetchingCriativos} />;
+  }
 
   const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <TableHead
@@ -512,20 +590,17 @@ export default function CreativesManagement() {
             variant="outline" 
             size="sm" 
             className="h-11 gap-2 sm:h-9"
-            onClick={async () => {
-              await refetch();
-              toast.success('Dados atualizados!');
-            }}
-            disabled={isLoadingList}
+            onClick={handleRefresh}
+            disabled={isLoadingList || isRefreshing}
           >
-            {isLoadingList ? (
+            {isLoadingList || isRefreshing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4" />
             )}
             Atualizar
           </Button>
-          <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <Sheet open={isDialogOpen} onOpenChange={handleNewDialogOpenChange}>
             <SheetTrigger asChild>
               <Button className="h-11 gap-2 sm:h-10">
                 <Plus className="h-4 w-4" />
@@ -643,7 +718,7 @@ export default function CreativesManagement() {
                 </div>
               </ScrollArea>
               <SheetFooter className="grid shrink-0 grid-cols-2 gap-2 space-y-0 border-t bg-background px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6">
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button variant="outline" onClick={() => handleNewDialogOpenChange(false)}>
                   Cancelar
                 </Button>
                 <Button
@@ -1153,7 +1228,7 @@ export default function CreativesManagement() {
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={handleEditDialogOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Editar Criativo</DialogTitle>
@@ -1261,7 +1336,7 @@ export default function CreativesManagement() {
             </div>
           </ScrollArea>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => handleEditDialogOpenChange(false)}>
               Cancelar
             </Button>
             <Button 
