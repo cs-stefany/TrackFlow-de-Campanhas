@@ -65,6 +65,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   useCriativos,
+  useOfertas,
   useOfertasAtivas,
   useCopywriters,
   useCreateCriativo,
@@ -149,8 +150,13 @@ export default function CreativesManagement() {
     dataFim: periodo.dataFim,
   });
   const { data: criativos, isLoading: isLoadingCriativos } = useCriativos(); // Keep for edit dialog
-  const { data: ofertas, isLoading: isLoadingOfertas } = useOfertasAtivas();
+  const { data: ofertasAtivas } = useOfertasAtivas();
+  const { data: todasOfertas, isLoading: isLoadingTodasOfertas } = useOfertas();
   const { data: copywriters, isLoading: isLoadingCopywriters } = useCopywriters();
+  const ofertasDisponiveis = useMemo(
+    () => (todasOfertas || []).filter((oferta) => oferta.status !== 'arquivado'),
+    [todasOfertas]
+  );
 
   // Extrair oferta_ids únicos das métricas para buscar thresholds históricos
   const ofertaIdsFromMetricas = Array.from(
@@ -186,7 +192,7 @@ export default function CreativesManagement() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
   const pageSize = 8;
-  const isLoadingList = isLoadingMetricas || isLoadingCriativos;
+  const isLoadingList = isLoadingMetricas || isLoadingCriativos || isLoadingTodasOfertas;
 
   // New creative form state
   const [newOferta, setNewOferta] = useState('');
@@ -243,7 +249,7 @@ export default function CreativesManagement() {
         const conversoes = historico.reduce((sum, metrica) => sum + (metrica.conversoes || 0), 0);
         const cliques = historico.reduce((sum, metrica) => sum + (metrica.cliques || 0), 0);
         const impressoes = historico.reduce((sum, metrica) => sum + (metrica.impressoes || 0), 0);
-        const oferta = latest?.criativo?.oferta || ofertas?.find((item) => item.id === criativo.oferta_id);
+        const oferta = latest?.criativo?.oferta || ofertasDisponiveis.find((item) => item.id === criativo.oferta_id);
 
         return {
           ...(latest || {}),
@@ -271,7 +277,7 @@ export default function CreativesManagement() {
           },
         } as MetricaDiariaComCriativo;
       });
-  }, [criativos, metricasPorCriativo, ofertas, periodo.dataFim]);
+  }, [criativos, metricasPorCriativo, ofertasDisponiveis, periodo.dataFim]);
 
   // Filtra uma linha por criativo com as métricas somadas no período.
   const filteredMetricas = metricasAgregadas.filter((metrica) => {
@@ -325,12 +331,6 @@ export default function CreativesManagement() {
   const currentPage = Math.min(page, totalPages);
   const paginatedMetricas = sortedMetricas.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const getOfferName = (ofertaId: string | null) => {
-    if (!ofertaId) return 'N/A';
-    const offer = ofertas?.find((o) => o.id === ofertaId);
-    return offer?.nome || 'N/A';
-  };
-
   // Converte Thresholds (verde/amarelo) para formato do MetricBadge (green/yellow)
   const convertThresholdsFormat = (t: Thresholds) => ({
     roas: { green: t.roas.verde, yellow: t.roas.amarelo },
@@ -353,7 +353,7 @@ export default function CreativesManagement() {
   // Get offer name from oferta_id (for edit dialog)
   const getOfferNameById = (ofertaId: string | null) => {
     if (!ofertaId) return 'N/A';
-    const offer = ofertas?.find((o) => o.id === ofertaId);
+    const offer = ofertasDisponiveis.find((o) => o.id === ofertaId);
     return offer?.nome || 'N/A';
   };
 
@@ -504,7 +504,7 @@ export default function CreativesManagement() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gestão de Criativos</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {(criativos || []).length} criativo(s) cadastrado(s)
+            {(criativos || []).filter((criativo) => criativo.status !== 'arquivado').length} criativo(s) cadastrado(s)
           </p>
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
@@ -548,7 +548,7 @@ export default function CreativesManagement() {
                         <SelectValue placeholder="Selecione uma oferta" />
                       </SelectTrigger>
                       <SelectContent>
-                        {(ofertas || []).map((offer) => (
+                        {(ofertasAtivas || []).map((offer) => (
                           <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>
                         ))}
                       </SelectContent>
@@ -696,7 +696,7 @@ export default function CreativesManagement() {
               <SelectTrigger className="h-11 w-full"><SelectValue placeholder="Oferta" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Ofertas</SelectItem>
-                {(ofertas || []).map((offer) => <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>)}
+                {ofertasDisponiveis.map((offer) => <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
@@ -769,7 +769,7 @@ export default function CreativesManagement() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas Ofertas</SelectItem>
-              {(ofertas || []).map((offer) => (
+              {ofertasDisponiveis.map((offer) => (
                 <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>
               ))}
             </SelectContent>
@@ -1171,7 +1171,7 @@ export default function CreativesManagement() {
                     <SelectValue placeholder="Selecione uma oferta" />
                   </SelectTrigger>
                   <SelectContent>
-                    {(ofertas || []).map((offer) => (
+                    {ofertasDisponiveis.map((offer) => (
                       <SelectItem key={offer.id} value={offer.id}>{offer.nome}</SelectItem>
                     ))}
                   </SelectContent>
