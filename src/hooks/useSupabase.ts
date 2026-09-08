@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateInput } from '@/lib/format';
 import {
   // Ofertas
   fetchOfertas,
@@ -160,6 +161,8 @@ export function useArchiveOferta() {
       // Invalidar ofertas E criativos, pois ambos foram afetados
       queryClient.invalidateQueries({ queryKey: queryKeys.ofertas.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.totais() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
     },
   });
 }
@@ -173,6 +176,8 @@ export function useRestoreOferta() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ofertas.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.totais() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
     },
   });
 }
@@ -193,6 +198,8 @@ export function useDeleteOferta() {
     mutationFn: (id: string) => deleteOferta(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.ofertas.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.totais() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
     },
   });
 }
@@ -254,6 +261,7 @@ export function useCreateCriativo() {
     mutationFn: (criativo: CriativoInsert) => createCriativo(criativo),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
       if (data.oferta_id) {
         queryClient.invalidateQueries({ 
           queryKey: queryKeys.criativos.byOferta(data.oferta_id) 
@@ -271,6 +279,7 @@ export function useUpdateCriativo() {
       updateCriativo(id, updates),
     onSuccess: (data, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.detail(id) });
       if (data.oferta_id) {
         queryClient.invalidateQueries({ 
@@ -288,6 +297,7 @@ export function useArchiveCriativo() {
     mutationFn: (id: string) => archiveCriativo(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
     },
   });
 }
@@ -299,6 +309,7 @@ export function useRestoreCriativo() {
     mutationFn: (id: string) => restoreCriativo(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
     },
   });
 }
@@ -310,6 +321,7 @@ export function useDeleteCriativo() {
     mutationFn: (id: string) => deleteCriativo(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.criativos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.metricas.contadorCriativos() });
     },
   });
 }
@@ -570,17 +582,26 @@ export function useTotaisOfertas() {
   return useQuery({
     queryKey: queryKeys.metricas.totais(),
     queryFn: async () => {
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = formatDateInput(new Date());
       const seteDias = new Date();
       seteDias.setDate(seteDias.getDate() - 6);
-      const seteDiasStr = seteDias.toISOString().split('T')[0];
+      const seteDiasStr = formatDateInput(seteDias);
       
-      // Fetch all metrics for calculation
-      const [metricasHoje, metricas7d, metricasTotal] = await Promise.all([
-        fetchMetricasDiariasOferta({ dataInicio: hoje, dataFim: hoje }),
-        fetchMetricasDiariasOferta({ dataInicio: seteDiasStr, dataFim: hoje }),
+      const [metricas, ofertas] = await Promise.all([
         fetchMetricasDiariasOferta({}),
+        fetchOfertas(),
       ]);
+
+      const ofertasNaoArquivadas = new Set(
+        ofertas.filter((oferta) => oferta.status !== 'arquivado').map((oferta) => oferta.id)
+      );
+      const metricasTotal = metricas.filter(
+        (metrica) => metrica.oferta_id && ofertasNaoArquivadas.has(metrica.oferta_id)
+      );
+      const metricasHoje = metricasTotal.filter((metrica) => metrica.data === hoje);
+      const metricas7d = metricasTotal.filter(
+        (metrica) => metrica.data >= seteDiasStr && metrica.data <= hoje
+      );
       
       const sumMetrics = (metricas: typeof metricasTotal) => {
         const spend = metricas.reduce((acc, m) => acc + (m.spend || 0), 0);
@@ -603,9 +624,10 @@ export function useContadorCriativos() {
     queryKey: queryKeys.metricas.contadorCriativos(),
     queryFn: async () => {
       const criativos = await fetchCriativos();
+      const criativosNaoArquivados = criativos.filter((criativo) => criativo.status !== 'arquivado');
       
       const contador = {
-        total: criativos.length,
+        total: criativosNaoArquivados.length,
         liberado: 0,
         em_teste: 0,
         nao_validado: 0,
@@ -613,7 +635,7 @@ export function useContadorCriativos() {
         arquivado: 0,
       };
       
-      criativos.forEach((c) => {
+      criativosNaoArquivados.forEach((c) => {
         const status = c.status as keyof typeof contador;
         if (status in contador) {
           contador[status]++;
@@ -652,10 +674,10 @@ export function useAllOffersAggregatedMetrics() {
   return useQuery({
     queryKey: queryKeys.metricas.allAggregated(),
     queryFn: async () => {
-      const hoje = new Date().toISOString().split('T')[0];
+      const hoje = formatDateInput(new Date());
       const seteDias = new Date();
       seteDias.setDate(seteDias.getDate() - 6);
-      const seteDiasStr = seteDias.toISOString().split('T')[0];
+      const seteDiasStr = formatDateInput(seteDias);
       
       // Fetch all metrics
       const allMetrics = await fetchMetricasDiariasOferta({});

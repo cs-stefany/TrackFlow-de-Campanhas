@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { useUpdateOferta, useThresholdVigente } from '@/hooks/useSupabase';
 import { parseThresholds, type Oferta, type Thresholds } from '@/services/api';
 import { getMetricStatus, formatRoas, formatCurrency } from '@/lib/metrics';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatDateInput } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 interface ThresholdsDialogProps {
@@ -72,7 +72,7 @@ export function ThresholdsDialog({
     : parseThresholds(oferta?.thresholds);
 
   // Verificar se é data de hoje
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = formatDateInput(new Date());
   const isHistorico = dataMetrica && dataMetrica !== hoje;
 
   // Initialize form values when dialog opens or oferta changes

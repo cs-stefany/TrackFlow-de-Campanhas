@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Json, Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { formatDateInput } from '@/lib/format';
 
 // Re-export types for convenience
 export type Oferta = Tables<'ofertas'>;
@@ -689,7 +690,7 @@ export async function insertThresholdHistorico(
   thresholds: Thresholds,
   dataInicio?: string
 ): Promise<void> {
-  const data = dataInicio || new Date().toISOString().split('T')[0];
+  const data = dataInicio || formatDateInput(new Date());
 
   const { error } = await supabase
     .from('ofertas_thresholds_historico')
@@ -737,7 +738,7 @@ export async function fetchThresholdsHistorico(ofertaId: string): Promise<Thresh
 
 export function getDateRange(period: string): { dataInicio: string; dataFim: string } {
   const hoje = new Date();
-  const dataFim = hoje.toISOString().split('T')[0];
+  const dataFim = formatDateInput(hoje);
   
   let dataInicio: string;
   
@@ -748,13 +749,13 @@ export function getDateRange(period: string): { dataInicio: string; dataFim: str
     case '7d': {
       const seteDias = new Date(hoje);
       seteDias.setDate(seteDias.getDate() - 6);
-      dataInicio = seteDias.toISOString().split('T')[0];
+      dataInicio = formatDateInput(seteDias);
       break;
     }
     case '30d': {
       const trintaDias = new Date(hoje);
       trintaDias.setDate(trintaDias.getDate() - 29);
-      dataInicio = trintaDias.toISOString().split('T')[0];
+      dataInicio = formatDateInput(trintaDias);
       break;
     }
     case 'all':

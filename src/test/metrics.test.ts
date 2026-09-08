@@ -6,8 +6,8 @@ import {
   getMetricStatus,
   type OfferThresholds,
 } from '@/lib/metrics';
-import { formatCurrency, formatDate } from '@/lib/format';
-import { parseThresholds } from '@/services/api';
+import { formatCurrency, formatDate, formatDateInput } from '@/lib/format';
+import { getDateRange, parseThresholds } from '@/services/api';
 
 const thresholds: OfferThresholds = {
   roas: { green: 1.3, yellow: 1.1 },
@@ -43,6 +43,10 @@ describe('formatação e limites', () => {
 
   it('formata datas sem deslocar o dia', () => {
     expect(formatDate('2026-09-02')).toBe('02/09/2026');
+    expect(formatDateInput(new Date(2026, 8, 2, 23, 30))).toBe('2026-09-02');
+    const today = getDateRange('today');
+    expect(today.dataInicio).toBe(today.dataFim);
+    expect(today.dataFim).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it('preserva padrões quando os limites estão incompletos', () => {

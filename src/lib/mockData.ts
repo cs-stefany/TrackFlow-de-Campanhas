@@ -1,4 +1,5 @@
 // TrackFlow Mock Data - Simulating real ad tracking scenarios
+import { formatDateInput } from './format';
 
 export type HealthStatus = 'success' | 'warning' | 'danger';
 
@@ -102,7 +103,7 @@ const generateDailyMetrics = (
     const cpc = 1 + Math.random() * 1.5;
 
     metrics.push({
-      date: date.toISOString().split('T')[0],
+      date: formatDateInput(date),
       revenue: Math.round(revenue * 100) / 100,
       spend: Math.round(spend * 100) / 100,
       roas: Math.round(roas * 100) / 100,
