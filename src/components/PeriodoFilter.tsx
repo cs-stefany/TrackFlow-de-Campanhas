@@ -183,7 +183,7 @@ export function PeriodoFilter({
   return (
     <div className={cn("flex min-w-0 items-center gap-2", className)}>
       <Select value={value.tipo} onValueChange={(v) => handleTipoChange(v as PeriodoTipo)}>
-        <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[150px]">
+        <SelectTrigger className="h-11 w-full sm:h-10 sm:w-[170px]">
           <SelectValue placeholder="Período" />
         </SelectTrigger>
         <SelectContent>

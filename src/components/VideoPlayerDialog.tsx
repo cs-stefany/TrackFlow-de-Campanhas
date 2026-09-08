@@ -92,7 +92,7 @@ export function VideoPlayerDialog({ url, creativeId, trigger }: VideoPlayerDialo
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7"
+              className="h-11 w-11 sm:h-7 sm:w-7"
               onClick={() => window.open(url, '_blank')}
               title="Abrir em nova aba"
             >

@@ -857,7 +857,7 @@ export default function CreativesManagement() {
                       <div className="min-w-0 flex-1">
                         <button
                           type="button"
-                          className="max-w-full truncate text-left font-mono text-sm font-semibold hover:text-primary"
+                          className="line-clamp-2 max-w-full min-h-11 break-all text-left font-mono text-sm font-semibold leading-5 hover:text-primary"
                           onClick={() => copyToClipboard(metrica.criativo!.id_unico)}
                         >
                           {metrica.criativo.id_unico}
@@ -923,7 +923,7 @@ export default function CreativesManagement() {
                         </summary>
                         <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
                           {historico.map((dia) => (
-                            <div key={dia.id} className="grid grid-cols-4 items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                            <div key={dia.id} className="grid grid-cols-2 items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs min-[360px]:grid-cols-4">
                               <span className="font-medium">{formatDate(dia.data)}</span>
                               <span className="text-center">ROAS {formatRoas(dia.roas || 0)}</span>
                               <span className="text-center">IC {formatCurrency(dia.ic || 0)}</span>
@@ -938,13 +938,13 @@ export default function CreativesManagement() {
                       <Button
                         variant="secondary"
                         size="sm"
-                        className="gap-2"
+                        className="h-11 min-w-0 gap-2"
                         disabled={!metrica.criativo.oferta_id}
                         onClick={() => metrica.criativo?.oferta_id && navigate(`/ofertas/${metrica.criativo.oferta_id}`)}
                       >
                         <Eye className="h-4 w-4" /> Abrir oferta
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-2" onClick={() => openEditDialog(metrica.criativo!.id)}>
+                      <Button variant="outline" size="sm" className="h-11 min-w-0 gap-2" onClick={() => openEditDialog(metrica.criativo!.id)}>
                         <Pencil className="h-4 w-4" /> Editar
                       </Button>
                     </div>

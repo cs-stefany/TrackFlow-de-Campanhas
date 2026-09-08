@@ -442,7 +442,7 @@ export default function OfferDetails() {
                       <div className="min-w-0 flex-1">
                         <button
                           type="button"
-                          className="max-w-full truncate text-left font-mono text-sm font-semibold hover:text-primary"
+                          className="line-clamp-2 max-w-full break-all text-left font-mono text-sm font-semibold leading-5 hover:text-primary"
                           onClick={() => handleCopyId(criativo.id_unico)}
                         >
                           {criativo.id_unico}
@@ -658,22 +658,31 @@ export default function OfferDetails() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 sm:max-w-2xl sm:grid-cols-4">
-          <TabsTrigger value="daily" className="min-w-0 px-2 py-2 text-xs">Resultado Diário</TabsTrigger>
-          <TabsTrigger value="fb" className="min-w-0 px-2 py-2 text-xs">
-            Criativos FB ({oferta?.status === 'arquivado'
-              ? criativosFB?.length || 0
-              : criativosFB?.filter(c => c.status !== 'arquivado').length || 0})
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl p-1 sm:max-w-2xl sm:grid-cols-4">
+          <TabsTrigger value="daily" className="min-h-11 min-w-0 whitespace-normal px-2 py-2 text-xs">Resultado diário</TabsTrigger>
+          <TabsTrigger value="fb" className="min-h-11 min-w-0 gap-1.5 whitespace-normal px-2 py-2 text-xs">
+            Facebook
+            <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] tabular-nums">
+              {oferta?.status === 'arquivado'
+                ? criativosFB?.length || 0
+                : criativosFB?.filter(c => c.status !== 'arquivado').length || 0}
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="yt" className="min-w-0 px-2 py-2 text-xs">
-            Criativos YT ({oferta?.status === 'arquivado'
-              ? criativosYT?.length || 0
-              : criativosYT?.filter(c => c.status !== 'arquivado').length || 0})
+          <TabsTrigger value="yt" className="min-h-11 min-w-0 gap-1.5 whitespace-normal px-2 py-2 text-xs">
+            YouTube
+            <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] tabular-nums">
+              {oferta?.status === 'arquivado'
+                ? criativosYT?.length || 0
+                : criativosYT?.filter(c => c.status !== 'arquivado').length || 0}
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="tt" className="min-w-0 px-2 py-2 text-xs">
-            Criativos TT ({oferta?.status === 'arquivado'
-              ? criativosTT?.length || 0
-              : criativosTT?.filter(c => c.status !== 'arquivado').length || 0})
+          <TabsTrigger value="tt" className="min-h-11 min-w-0 gap-1.5 whitespace-normal px-2 py-2 text-xs">
+            TikTok
+            <span className="rounded-full bg-background/70 px-1.5 py-0.5 text-[10px] tabular-nums">
+              {oferta?.status === 'arquivado'
+                ? criativosTT?.length || 0
+                : criativosTT?.filter(c => c.status !== 'arquivado').length || 0}
+            </span>
           </TabsTrigger>
         </TabsList>
 

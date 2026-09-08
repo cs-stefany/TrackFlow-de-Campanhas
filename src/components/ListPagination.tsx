@@ -25,7 +25,7 @@ export function ListPagination({ page, pageSize, totalItems, onPageChange }: Lis
           type="button"
           variant="outline"
           size="icon"
-          className="h-10 w-10"
+          className="h-11 w-11 sm:h-10 sm:w-10"
           aria-label="Página anterior"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
@@ -39,7 +39,7 @@ export function ListPagination({ page, pageSize, totalItems, onPageChange }: Lis
           type="button"
           variant="outline"
           size="icon"
-          className="h-10 w-10"
+          className="h-11 w-11 sm:h-10 sm:w-10"
           aria-label="Próxima página"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}

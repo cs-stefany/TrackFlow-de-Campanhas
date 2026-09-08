@@ -965,7 +965,7 @@ export default function OffersManagement() {
                         </summary>
                         <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
                           {historico.map((dia) => (
-                            <div key={dia.id} className="grid grid-cols-4 items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                            <div key={dia.id} className="grid grid-cols-2 items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs min-[360px]:grid-cols-4">
                               <span className="font-medium">{formatDate(dia.data)}</span>
                               <span className="text-center">ROAS {formatRoas(dia.roas || 0)}</span>
                               <span className="text-center">IC {formatCurrency(dia.ic || 0)}</span>
@@ -977,13 +977,13 @@ export default function OffersManagement() {
                     )}
 
                     <div className="grid grid-cols-3 gap-2 p-3">
-                      <Button variant="secondary" size="sm" className="gap-1.5 px-2" onClick={() => navigate(`/ofertas/${metrica.oferta!.id}`)}>
+                      <Button variant="secondary" size="sm" className="h-11 min-w-0 gap-1.5 px-2" onClick={() => navigate(`/ofertas/${metrica.oferta!.id}`)}>
                         <Eye className="h-4 w-4" /> Abrir
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5 px-2" onClick={() => openThresholdsDialog(metrica)}>
+                      <Button variant="outline" size="sm" className="h-11 min-w-0 gap-1.5 px-2" onClick={() => openThresholdsDialog(metrica)}>
                         <BarChart2 className="h-4 w-4" /> Metas
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5 px-2" onClick={() => openEditSheet(metrica.oferta!)}>
+                      <Button variant="outline" size="sm" className="h-11 min-w-0 gap-1.5 px-2" onClick={() => openEditSheet(metrica.oferta!)}>
                         <Pencil className="h-4 w-4" /> Editar
                       </Button>
                     </div>

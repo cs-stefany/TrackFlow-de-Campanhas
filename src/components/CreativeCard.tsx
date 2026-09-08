@@ -17,6 +17,7 @@ interface CreativeCardProps {
     cpc: number;
   };
   onClick?: () => void;
+  actionsOverlay?: boolean;
 }
 
 const sourceColors: Record<string, string> = {
@@ -40,7 +41,7 @@ function convertThresholds(thresholds: ReturnType<typeof parseThresholds>) {
   };
 }
 
-export function CreativeCard({ criativo, oferta, metrics, onClick }: CreativeCardProps) {
+export function CreativeCard({ criativo, oferta, metrics, onClick, actionsOverlay = false }: CreativeCardProps) {
   const thresholds = oferta?.thresholds
     ? convertThresholds(parseThresholds(oferta.thresholds))
     : convertThresholds(parseThresholds(null));
@@ -63,7 +64,7 @@ export function CreativeCard({ criativo, oferta, metrics, onClick }: CreativeCar
       className="cursor-pointer p-4 shadow-card transition-all duration-200 hover:shadow-card-hover hover:border-primary/20 active:scale-[0.99]"
     >
       {/* Header */}
-      <div className="flex items-start gap-3 mb-4">
+      <div className={cn("mb-4 flex items-start gap-3", actionsOverlay && "pr-24 sm:pr-16")}>
         {/* Thumbnail - clicável para abrir vídeo */}
         <div
           className="flex-shrink-0"
@@ -81,7 +82,7 @@ export function CreativeCard({ criativo, oferta, metrics, onClick }: CreativeCar
               health === 'danger' && "bg-danger"
             )} />
             <h3
-              className="font-mono text-sm font-semibold text-foreground truncate cursor-pointer hover:text-primary hover:underline transition-colors"
+              className="line-clamp-2 break-all text-left font-mono text-sm font-semibold leading-5 text-foreground transition-colors hover:text-primary hover:underline"
               onClick={(e) => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(criativo.id_unico);

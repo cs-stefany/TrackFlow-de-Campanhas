@@ -383,6 +383,7 @@ export default function ArchivedCreatives() {
                 oferta={getOffer(criativo.oferta_id)}
                 metrics={metrics}
                 onClick={() => handleCardClick(criativo)}
+                actionsOverlay
               />
               {/* Action icons overlay */}
               <TooltipProvider delayDuration={100}>
@@ -394,7 +395,8 @@ export default function ArchivedCreatives() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 bg-background/80 opacity-50 pointer-events-none"
+                            className="h-11 w-11 bg-background/90 opacity-50 pointer-events-none shadow-sm sm:h-8 sm:w-8"
+                            aria-label="Restauração indisponível"
                           >
                             <RotateCcw className="h-4 w-4" />
                           </Button>
@@ -410,7 +412,8 @@ export default function ArchivedCreatives() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 bg-background/80 hover:bg-background"
+                          className="h-11 w-11 bg-background/90 shadow-sm hover:bg-background sm:h-8 sm:w-8"
+                          aria-label={`Restaurar ${criativo.id_unico}`}
                           onClick={(e) => handleRestoreClick(criativo, e)}
                           disabled={updateCriativo.isPending}
                         >
@@ -425,7 +428,8 @@ export default function ArchivedCreatives() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 bg-background/80 hover:bg-background text-destructive hover:text-destructive"
+                        className="h-11 w-11 bg-background/90 text-destructive shadow-sm hover:bg-background hover:text-destructive sm:h-8 sm:w-8"
+                        aria-label={`Excluir ${criativo.id_unico}`}
                         onClick={(e) => handleDeleteClick(criativo, e)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -447,7 +451,7 @@ export default function ArchivedCreatives() {
             <DialogTitle className="flex min-w-0 flex-col items-start gap-1 pr-6 sm:flex-row sm:items-center sm:gap-2">
               Histórico de Métricas -
               <span
-                className="max-w-full truncate font-mono transition-colors hover:text-primary hover:underline"
+                className="max-w-full break-all text-left font-mono leading-5 transition-colors hover:text-primary hover:underline"
                 onClick={() => {
                   if (metricsCreative?.id_unico) {
                     navigator.clipboard.writeText(metricsCreative.id_unico);

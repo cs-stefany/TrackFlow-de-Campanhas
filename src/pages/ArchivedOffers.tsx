@@ -307,6 +307,7 @@ export default function ArchivedOffers() {
                 oferta={offer}
                 metrics={aggregatedMetrics?.get(offer.id)}
                 creativesCount={creativesCountByOffer?.get(offer.id)}
+                actionsOverlay
               />
               {/* Action icons overlay */}
               <TooltipProvider delayDuration={100}>
@@ -316,7 +317,8 @@ export default function ArchivedOffers() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 bg-background/80 hover:bg-background"
+                        className="h-11 w-11 bg-background/90 shadow-sm hover:bg-background sm:h-8 sm:w-8"
+                        aria-label={`Restaurar ${offer.nome}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRestoreClick(offer);
@@ -332,7 +334,8 @@ export default function ArchivedOffers() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 bg-background/80 hover:bg-background text-destructive hover:text-destructive"
+                        className="h-11 w-11 bg-background/90 text-destructive shadow-sm hover:bg-background hover:text-destructive sm:h-8 sm:w-8"
+                        aria-label={`Excluir ${offer.nome}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteClick(offer);
@@ -375,7 +378,7 @@ export default function ArchivedOffers() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
+                    className="h-11 text-xs sm:h-8"
                     onClick={handleSelectAll}
                   >
                     Todos
@@ -383,7 +386,7 @@ export default function ArchivedOffers() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs"
+                    className="h-11 text-xs sm:h-8"
                     onClick={handleDeselectAll}
                   >
                     Nenhum
@@ -404,7 +407,7 @@ export default function ArchivedOffers() {
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="font-mono text-sm truncate">{criativo.id_unico}</p>
+                        <p className="line-clamp-2 break-all font-mono text-sm leading-5">{criativo.id_unico}</p>
                         <p className="text-xs text-muted-foreground capitalize">{criativo.fonte}</p>
                       </div>
                     </div>

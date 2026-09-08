@@ -29,10 +29,11 @@ export function MobileFiltersSheet({
         <Button
           type="button"
           variant="outline"
-          className="relative h-11 shrink-0 gap-2 px-3 md:hidden"
+          className="relative h-11 shrink-0 gap-2 px-3 max-[359px]:w-11 max-[359px]:gap-0 max-[359px]:px-0 md:hidden"
+          aria-label={activeCount > 0 ? `Filtros, ${activeCount} ativo(s)` : 'Filtros'}
         >
           <SlidersHorizontal className="h-4 w-4" />
-          Filtros
+          <span className="max-[359px]:sr-only">Filtros</span>
           {activeCount > 0 && (
             <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-foreground">
               {activeCount}
@@ -50,11 +51,11 @@ export function MobileFiltersSheet({
         </SheetHeader>
         <div className="grid gap-3 py-5">{children}</div>
         <SheetFooter className="grid grid-cols-2 gap-2 space-y-0">
-          <Button type="button" variant="outline" onClick={onClear}>
+          <Button type="button" variant="outline" className="h-11" onClick={onClear}>
             Limpar
           </Button>
           <SheetClose asChild>
-            <Button type="button">Ver resultados</Button>
+            <Button type="button" className="h-11">Ver resultados</Button>
           </SheetClose>
         </SheetFooter>
       </SheetContent>

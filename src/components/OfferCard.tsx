@@ -10,6 +10,7 @@ interface OfferCardProps {
   oferta: Oferta;
   metrics?: OfferAggregatedMetrics;
   creativesCount?: { liberado: number; em_teste: number; nao_validado: number; arquivado?: number };
+  actionsOverlay?: boolean;
 }
 
 // Convert thresholds to format expected by metrics utils
@@ -21,7 +22,7 @@ function convertThresholds(thresholds: ReturnType<typeof parseThresholds>) {
   };
 }
 
-export function OfferCard({ oferta, metrics, creativesCount }: OfferCardProps) {
+export function OfferCard({ oferta, metrics, creativesCount, actionsOverlay = false }: OfferCardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const thresholds = convertThresholds(parseThresholds(oferta.thresholds));
@@ -52,7 +53,7 @@ export function OfferCard({ oferta, metrics, creativesCount }: OfferCardProps) {
       className="cursor-pointer p-4 shadow-card transition-all duration-200 hover:shadow-card-hover hover:border-primary/20 active:scale-[0.99]"
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
+      <div className={cn("mb-4 flex items-start justify-between", actionsOverlay && "pr-24 sm:pr-16")}>
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <div className={cn("h-2.5 w-2.5 rounded-full", getHealthColor(health))} />

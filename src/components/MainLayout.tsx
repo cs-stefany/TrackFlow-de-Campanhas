@@ -30,7 +30,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           "min-w-0 pb-24 transition-[padding] duration-300 md:pb-0",
           collapsed ? "md:pl-16" : "md:pl-64"
         )}>
-          <div className="mx-auto max-w-[1600px] p-4 sm:p-5 lg:p-6">
+          <div className="mx-auto max-w-[1600px] p-3 min-[360px]:p-4 sm:p-5 lg:p-6">
             {children}
           </div>
         </main>

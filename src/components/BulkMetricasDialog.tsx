@@ -446,10 +446,10 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate font-mono text-xs font-semibold">{row.id_criativo}</p>
+                        <p className="line-clamp-2 break-all font-mono text-xs font-semibold leading-4">{row.id_criativo}</p>
                         <p className="mt-1 text-xs text-muted-foreground">Linha {row.linha} · {row.data}</p>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeRow(row.linha)}>
+                      <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 sm:h-7 sm:w-7" onClick={() => removeRow(row.linha)}>
                         <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
