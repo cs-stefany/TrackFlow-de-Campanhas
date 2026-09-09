@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MainLayout } from "./components/MainLayout";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import { Loader2 } from "lucide-react";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -40,17 +41,19 @@ const App = () => (
       <Sonner />
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <MainLayout>
-          <Suspense fallback={<PageLoading />}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/ofertas" element={<OffersManagement />} />
-              <Route path="/ofertas/:id" element={<OfferDetails />} />
-              <Route path="/ofertas-arquivadas" element={<ArchivedOffers />} />
-              <Route path="/criativos" element={<CreativesManagement />} />
-              <Route path="/criativos-arquivados" element={<ArchivedCreatives />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          <AppErrorBoundary>
+            <Suspense fallback={<PageLoading />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/ofertas" element={<OffersManagement />} />
+                <Route path="/ofertas/:id" element={<OfferDetails />} />
+                <Route path="/ofertas-arquivadas" element={<ArchivedOffers />} />
+                <Route path="/criativos" element={<CreativesManagement />} />
+                <Route path="/criativos-arquivados" element={<ArchivedCreatives />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AppErrorBoundary>
         </MainLayout>
       </BrowserRouter>
     </TooltipProvider>

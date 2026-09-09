@@ -575,7 +575,7 @@ CR_EXEMPLO_02,2026-02-05,200.00,600.00,15000,300,20`;
         </div>
 
         <DialogFooter className="shrink-0 border-t pt-4">
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancelar
           </Button>
           {parsedRows.length > 0 && (

@@ -262,7 +262,7 @@ export function ThresholdsDialog({
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={handleClose}>
+                <Button variant="outline" onClick={() => handleClose(false)}>
                   Fechar
                 </Button>
               </DialogFooter>
