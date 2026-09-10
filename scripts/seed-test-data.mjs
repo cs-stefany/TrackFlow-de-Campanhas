@@ -31,7 +31,26 @@ async function api(path, method = 'GET', rows) {
 }
 
 const tables = ['ofertas', 'criativos', 'metricas_diarias', 'metricas_diarias_oferta', 'ofertas_thresholds_historico', 'nichos', 'paises', 'copywriters'];
-if (!process.argv.includes('--apply')) {
+if (process.argv.includes('--remove-label')) {
+  const offers = await api('ofertas?select=id,nome&nome=like.TESTE*');
+  const creatives = await api('criativos?select=id,id_unico,observacoes&id_unico=like.TESTE*');
+  const allIds = new Set((await api('criativos?select=id_unico&limit=1000')).map(row => row.id_unico));
+  for (const row of creatives) {
+    if (allIds.has(row.id_unico.replace(/^TESTE_/, 'CR_'))) throw new Error('Identificador de destino já existente.');
+  }
+  for (const row of offers) {
+    const renamed = await api(`ofertas?id=eq.${row.id}&nome=eq.${encodeURIComponent(row.nome)}`, 'PATCH', { nome: row.nome.replace(/^TESTE\s*[•·-]?\s*/, '') });
+    if (renamed.length !== 1) throw new Error('Oferta mudou durante a atualização.');
+  }
+  for (const row of creatives) {
+    const renamed = await api(`criativos?id=eq.${row.id}&id_unico=eq.${encodeURIComponent(row.id_unico)}`, 'PATCH', {
+      id_unico: row.id_unico.replace(/^TESTE_/, 'CR_'),
+      observacoes: row.observacoes?.replace('DADOS FICTÍCIOS DE TESTE.', 'Dados demonstrativos.') ?? null,
+    });
+    if (renamed.length !== 1) throw new Error('Criativo mudou durante a atualização.');
+  }
+  console.log(JSON.stringify({ ofertasRenomeadas: offers.length, criativosRenomeados: creatives.length }));
+} else if (!process.argv.includes('--apply')) {
   console.log('Banco publicado:', url);
   for (const table of tables) {
     const rows = await api(`${table}?select=*&limit=2`);
@@ -60,11 +79,11 @@ async function seed() {
   const writers = await api('copywriters?select=nome');
   if (!nichos.length || !paises.length || !writers.length) throw new Error('Cadastros básicos indisponíveis.');
   const names = [
-    'TESTE • Campanha lucrativa', 'TESTE • Campanha em atenção', 'TESTE • Campanha com prejuízo',
-    'TESTE • Campanha pausada', 'TESTE • Campanha com nome muito longo para conferir a leitura dos cartões e das tabelas no celular',
-    'TESTE • Conversões zeradas', 'TESTE • Investimento alto', 'TESTE • Campanha multicanal',
-    'TESTE • Nova oferta sem métricas', 'TESTE • Arquivo com criativos vinculados',
-    'TESTE • Arquivo para restauração parcial', 'TESTE • Arquivo vazio para exclusão',
+    'Campanha lucrativa', 'Campanha em atenção', 'Campanha com prejuízo',
+    'Campanha pausada', 'Campanha com nome muito longo para conferir a leitura dos cartões e das tabelas no celular',
+    'Conversões zeradas', 'Investimento alto', 'Campanha multicanal',
+    'Nova oferta sem métricas', 'Arquivo com criativos vinculados',
+    'Arquivo para restauração parcial', 'Arquivo vazio para exclusão',
   ];
   const offers = names.map((nome, index) => ({
     id: uuid(`offer-${index}`), nome,
@@ -85,12 +104,12 @@ async function seed() {
     if (i === 11) return [];
     return Array.from({ length: i === 8 ? 1 : 3 }, (_, j) => ({
       id: uuid(`creative-${i}-${j}`), oferta_id: offer.id,
-      id_unico: `TESTE_${today.replaceAll('-', '')}_${String(i+1).padStart(2,'0')}_${j+1}_${sources[(i+j)%4].toUpperCase()}${i === 4 ? '_IDENTIFICADOR_LONGO_PARA_VALIDAR_A_LEITURA_NO_MOBILE' : ''}`,
+      id_unico: `CR_${today.replaceAll('-', '')}_${String(i+1).padStart(2,'0')}_${j+1}_${sources[(i+j)%4].toUpperCase()}${i === 4 ? '_IDENTIFICADOR_LONGO_PARA_VALIDAR_A_LEITURA_NO_MOBILE' : ''}`,
       fonte: sources[(i+j)%4], copy_responsavel: writers[(i+j)%writers.length].nome,
       status: i >= 9 || (i < 3 && j === 2) ? 'arquivado' : statuses[(i+j)%4],
       archived_at: i >= 9 ? offer.archived_at : i < 3 && j === 2 ? `${day(3)}T15:00:00Z` : null,
       url: urls[(i+j)%4], created_at: `${day(100)}T12:00:00Z`,
-      observacoes: 'DADOS FICTÍCIOS DE TESTE. Pode editar, arquivar ou excluir este criativo.\nMaterial ilustrativo para validar filtros, métricas e reprodução.',
+      observacoes: 'Dados demonstrativos. Pode editar, arquivar ou excluir este criativo.\nMaterial ilustrativo para validar filtros, métricas e reprodução.',
     }));
   });
   const history = offers.flatMap((offer) => [

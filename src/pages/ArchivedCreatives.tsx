@@ -645,7 +645,7 @@ export default function ArchivedCreatives() {
               </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 border-t pt-4">
             <Button variant="outline" onClick={() => setIsRestoreDialogOpen(false)}>
               Cancelar
             </Button>
@@ -661,7 +661,7 @@ export default function ArchivedCreatives() {
               ) : (
                 <>
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  Confirmar Restauração
+                  Restaurar
                 </>
               )}
             </Button>
@@ -673,20 +673,15 @@ export default function ArchivedCreatives() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">Excluir Criativo Permanentemente</DialogTitle>
+            <DialogTitle>Excluir criativo</DialogTitle>
             <DialogDescription>
-              Esta ação não pode ser desfeita. Todos os dados do criativo serão perdidos permanentemente.
+              A exclusão é permanente e não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-              <p className="text-sm text-destructive font-medium mb-2">
-                Você está prestes a excluir: <strong>{selectedCreative?.id_unico}</strong>
-              </p>
-              <p className="text-xs text-destructive/80">
-                Para confirmar, digite exatamente o ID do criativo abaixo:
-              </p>
-              <p className="text-sm font-mono font-bold text-destructive mt-1">
+            <div className="rounded-xl border bg-muted/40 p-4">
+              <p className="mb-1 text-xs text-muted-foreground">Criativo selecionado</p>
+              <p className="break-all text-sm font-medium leading-relaxed text-foreground">
                 {selectedCreative?.id_unico}
               </p>
             </div>
@@ -703,7 +698,7 @@ export default function ArchivedCreatives() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 border-t pt-4">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancelar
             </Button>
@@ -718,7 +713,7 @@ export default function ArchivedCreatives() {
                   Excluindo...
                 </>
               ) : (
-                'Excluir Permanentemente'
+                'Excluir'
               )}
             </Button>
           </DialogFooter>

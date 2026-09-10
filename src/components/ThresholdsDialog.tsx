@@ -178,7 +178,7 @@ export function ThresholdsDialog({
         <DialogHeader>
           <DialogTitle>Métricas Esperadas</DialogTitle>
           <DialogDescription>
-            Visualize os thresholds de saúde da oferta
+            Confira os limites e os resultados da oferta
           </DialogDescription>
         </DialogHeader>
 
@@ -209,55 +209,30 @@ export function ThresholdsDialog({
               <div className="space-y-4">
                 <h4 className="text-sm font-medium">
                   {isHistorico
-                    ? `Thresholds em ${formatDate(dataMetrica!)}`
-                    : 'Thresholds Atuais'}
+                    ? `Limites em ${formatDate(dataMetrica!)}`
+                    : 'Limites atuais'}
                 </h4>
                 
                 <div className="space-y-3">
-                  {/* ROAS */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">ROAS</span>
-                      <span className="text-sm text-muted-foreground">
-                        Verde &gt; {currentThresholds.roas.verde.toFixed(2)} | 
-                        Amarelo &gt; {currentThresholds.roas.amarelo.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono">{formatRoas(metricas.roas)}</span>
-                      {getStatusBadge(getMetricStatus(metricas.roas, 'roas', thresholdsForMetrics))}
-                    </div>
-                  </div>
-
-                  {/* IC */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">IC</span>
-                      <span className="text-sm text-muted-foreground">
-                        Verde &lt; {formatCurrency(currentThresholds.ic.verde)} | 
-                        Amarelo &lt; {formatCurrency(currentThresholds.ic.amarelo)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono">{formatCurrency(metricas.ic)}</span>
-                      {getStatusBadge(getMetricStatus(metricas.ic, 'ic', thresholdsForMetrics))}
-                    </div>
-                  </div>
-
-                  {/* CPC */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">CPC</span>
-                      <span className="text-sm text-muted-foreground">
-                        Verde &lt; {formatCurrency(currentThresholds.cpc.verde)} | 
-                        Amarelo &lt; {formatCurrency(currentThresholds.cpc.amarelo)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono">{formatCurrency(metricas.cpc)}</span>
-                      {getStatusBadge(getMetricStatus(metricas.cpc, 'cpc', thresholdsForMetrics))}
-                    </div>
-                  </div>
+                  {(['roas', 'ic', 'cpc'] as const).map((metric) => {
+                    const formatValue = metric === 'roas' ? formatRoas : formatCurrency;
+                    const comparison = metric === 'roas' ? 'Acima de' : 'Abaixo de';
+                    return (
+                      <div key={metric} className="rounded-xl border bg-muted/30 p-3">
+                        <div className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2 border-b pb-3">
+                          <span className="text-sm font-semibold">{metric.toUpperCase()}</span>
+                          <span className="min-w-0 break-words text-right text-sm font-semibold tabular-nums">{formatValue(metricas[metric])}</span>
+                          {getStatusBadge(getMetricStatus(metricas[metric], metric, thresholdsForMetrics))}
+                        </div>
+                        <dl className="mt-3 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
+                          <dt className="text-muted-foreground">Verde</dt>
+                          <dd className="tabular-nums">{comparison} {formatValue(currentThresholds[metric].verde)}</dd>
+                          <dt className="text-muted-foreground">Amarelo</dt>
+                          <dd className="tabular-nums">{comparison} {formatValue(currentThresholds[metric].amarelo)}</dd>
+                        </dl>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

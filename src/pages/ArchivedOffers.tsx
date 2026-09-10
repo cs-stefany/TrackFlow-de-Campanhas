@@ -384,7 +384,7 @@ export default function ArchivedOffers() {
             </div>
           ) : criativosToRestore.length > 0 ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm font-medium">
                   Selecione os criativos para restaurar ({selectedCriativoIds.size}/{criativosToRestore.length})
                 </p>
@@ -438,7 +438,7 @@ export default function ArchivedOffers() {
             </p>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 border-t pt-4">
             <Button variant="outline" onClick={() => setIsRestoreDialogOpen(false)}>
               Cancelar
             </Button>
@@ -454,7 +454,7 @@ export default function ArchivedOffers() {
               ) : (
                 <>
                   <RotateCcw className="h-4 w-4 mr-2" />
-                  Restaurar Oferta
+                  Restaurar
                 </>
               )}
             </Button>
@@ -466,20 +466,15 @@ export default function ArchivedOffers() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">Excluir Oferta Permanentemente</DialogTitle>
+            <DialogTitle>Excluir oferta</DialogTitle>
             <DialogDescription>
-              Esta ação não pode ser desfeita. Todos os dados da oferta serão perdidos permanentemente.
+              A exclusão é permanente e não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-              <p className="text-sm text-destructive font-medium mb-2">
-                Você está prestes a excluir: <strong>{selectedOffer?.nome}</strong>
-              </p>
-              <p className="text-xs text-destructive/80">
-                Para confirmar, digite exatamente o nome da oferta abaixo:
-              </p>
-              <p className="text-sm font-mono font-bold text-destructive mt-1">
+            <div className="rounded-xl border bg-muted/40 p-4">
+              <p className="mb-1 text-xs text-muted-foreground">Oferta selecionada</p>
+              <p className="break-all text-sm font-medium leading-relaxed text-foreground">
                 {selectedOffer?.nome}
               </p>
             </div>
@@ -496,7 +491,7 @@ export default function ArchivedOffers() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="grid grid-cols-2 border-t pt-4">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancelar
             </Button>
@@ -511,7 +506,7 @@ export default function ArchivedOffers() {
                   Excluindo...
                 </>
               ) : (
-                'Excluir Permanentemente'
+                'Excluir'
               )}
             </Button>
           </DialogFooter>
