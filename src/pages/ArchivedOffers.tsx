@@ -464,30 +464,34 @@ export default function ArchivedOffers() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Excluir oferta</DialogTitle>
             <DialogDescription>
               A exclusão é permanente e não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="rounded-xl border bg-muted/40 p-4">
-              <p className="mb-1 text-xs text-muted-foreground">Oferta selecionada</p>
-              <p className="break-all text-sm font-medium leading-relaxed text-foreground">
+          <div className="grid gap-5 py-2">
+            <p id="confirm-name-reference" className="text-sm leading-relaxed text-muted-foreground">
+              Você está prestes a excluir a oferta:{' '}
+              <strong className="select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-semibold text-foreground">
                 {selectedOffer?.nome}
-              </p>
-            </div>
+              </strong>
+            </p>
             <div className="grid gap-2">
               <label htmlFor="confirm-name" className="text-sm font-medium">
                 Digite o nome da oferta para confirmar
               </label>
               <Input
                 id="confirm-name"
+                aria-describedby="confirm-name-reference"
+                autoComplete="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 value={deleteConfirmName}
                 onChange={(e) => setDeleteConfirmName(e.target.value)}
                 placeholder="Digite o nome da oferta"
-                className="font-mono"
+                className="h-11 text-base"
               />
             </div>
           </div>

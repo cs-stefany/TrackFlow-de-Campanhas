@@ -671,30 +671,34 @@ export default function ArchivedCreatives() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Excluir criativo</DialogTitle>
             <DialogDescription>
               A exclusão é permanente e não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="rounded-xl border bg-muted/40 p-4">
-              <p className="mb-1 text-xs text-muted-foreground">Criativo selecionado</p>
-              <p className="break-all text-sm font-medium leading-relaxed text-foreground">
+          <div className="grid gap-5 py-2">
+            <p id="confirm-id-reference" className="text-sm leading-relaxed text-muted-foreground">
+              Você está prestes a excluir o criativo:{' '}
+              <strong className="select-text whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-semibold text-foreground">
                 {selectedCreative?.id_unico}
-              </p>
-            </div>
+              </strong>
+            </p>
             <div className="grid gap-2">
               <label htmlFor="confirm-id" className="text-sm font-medium">
                 Digite o ID do criativo para confirmar
               </label>
               <Input
                 id="confirm-id"
+                aria-describedby="confirm-id-reference"
+                autoComplete="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 value={deleteConfirmId}
                 onChange={(e) => setDeleteConfirmId(e.target.value)}
                 placeholder="Digite o ID do criativo"
-                className="font-mono"
+                className="h-11 text-base"
               />
             </div>
           </div>
